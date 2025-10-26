@@ -6,6 +6,17 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@phaser/*": ["src/phaser/*"],
+      "@phaser": ["src/phaser"],
+      "@components/*": ["src/components/*"],
+      "@components": ["src/components"],
+      "@pages/*": ["src/pages/*"],
+      "@pages": ["src/pages"],
+      "@/*": ["src/*"],
+      "@": ["src"]
+    },
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -20,7 +31,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
+  "erasableSyntaxOnly": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
