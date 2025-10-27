@@ -495,14 +495,13 @@ out/
 
 # Static site generators
 .cache/
-public/
 
 # Compiled binary addons
 build/Release
 
 # Gatsby files
 .cache/
-public
+
 
 
 
