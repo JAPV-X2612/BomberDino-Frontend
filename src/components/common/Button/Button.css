@@ -1,7 +1,7 @@
 .btn {
   padding: 18px 45px;
   font-size: 1.4rem;
-  font-family: var(--font-main);
+  font-family: var(--font-main), serif;
   font-weight: 800;
   border-radius: 15px;
   text-transform: uppercase;

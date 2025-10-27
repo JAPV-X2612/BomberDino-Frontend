@@ -70,6 +70,10 @@ export const GamePage: FC = () => {
         };
 
         globalThis.addEventListener('player-damage', handlePlayerDamage as EventListener);
+
+        return () => {
+            globalThis.removeEventListener('player-damage', handlePlayerDamage as EventListener);
+        };
     }, []);
 
     return (
