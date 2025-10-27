@@ -4,6 +4,6 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #087958; /* Fondo oscuro sin verde */
+  background: #087958;
   overflow: hidden;
 }

@@ -64,27 +64,30 @@ export const GamePage: FC = () => {
       });
     }, 1000);
 
-    // Escuchar eventos de Phaser
-    const updatePlayersWithDamage = (playersArr: typeof players, playerId: string, lives: number) => {
-      return playersArr.map(p => p.id === playerId ? { ...p, lives, isAlive: lives > 0 } : p);
+    const updatePlayersWithDamage = (
+      playersArr: typeof players,
+      playerId: string,
+      lives: number,
+    ) => {
+      return playersArr.map((p) => (p.id === playerId ? { ...p, lives, isAlive: lives > 0 } : p));
     };
 
     const handlePlayerDamage = (event: CustomEvent) => {
       const { playerId, lives } = event.detail;
-      setPlayers(prev => updatePlayersWithDamage(prev, playerId, lives));
+      setPlayers((prev) => updatePlayersWithDamage(prev, playerId, lives));
     };
 
     globalThis.addEventListener('player-damage', handlePlayerDamage as EventListener);
 
     return () => {
       clearInterval(timer);
-  globalThis.removeEventListener('player-damage', handlePlayerDamage as EventListener);
+      globalThis.removeEventListener('player-damage', handlePlayerDamage as EventListener);
     };
   }, []);
 
   return (
     <div className="game-page">
-  <Hud players={players} timeRemaining={timeRemaining} />
+      <Hud players={players} timeRemaining={timeRemaining} />
       <GameCanvas />
     </div>
   );
