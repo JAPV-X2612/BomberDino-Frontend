@@ -1,85 +1,90 @@
 @import url('https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@400;800&family=Baloo+2:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Colors */
-  --dark-green: #006B4C;
-  --light-green: #128B68;
-  --grey: #A49E9E;
-  --white: #FFFFFF;
-  --black: #000000;
-  --orange: #E57E29;
-  --light-blue: #38C2F1;
-  --light-light-green: #79B93F;
-  --purple: #983f94;
+    /* Colors */
+    --dark-green: #006b4c;
+    --light-green: #128b68;
+    --grey: #a49e9e;
+    --white: #ffffff;
+    --black: #000000;
+    --orange: #e57e29;
+    --light-blue: #38c2f1;
+    --light-light-green: #79b93f;
+    --purple: #983f94;
 
-  /* Fonts */
-  --font-main: 'Playpen Sans', cursive;
-  --font-title: 'Baloo 2', cursive;
+    /* Fonts */
+    --font-main: 'Playpen Sans', cursive;
+    --font-title: 'Baloo 2', cursive;
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-  font-family: var(--font-main);
-  background: linear-gradient(135deg, var(--dark-green) 0%, var(--light-green) 100%);
-  min-height: 100vh;
-  color: var(--white);
-  overflow-x: hidden;
+    font-family: var(--font-main), serif;
+    background: linear-gradient(135deg, var(--dark-green) 0%, var(--light-green) 100%);
+    min-height: 100vh;
+    color: var(--white);
+    overflow-x: hidden;
 }
 
 #root {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-title);
-  font-weight: 700;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-title), serif;
+    font-weight: 700;
 }
 
 button {
-  font-family: var(--font-main);
-  cursor: pointer;
-  border: none;
-  outline: none;
-  transition: all 0.3s ease;
+    font-family: var(--font-main), serif;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: all 0.3s ease;
 }
 
 button:hover {
-  transform: scale(1.05);
+    transform: scale(1.05);
 }
 
 button:active {
-  transform: scale(0.95);
+    transform: scale(0.95);
 }
 
 input {
-  font-family: var(--font-main);
-  outline: none;
+    font-family: var(--font-main), serif;
+    outline: none;
 }
 
 /* Dinosaur patterns background */
 body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.05;
-  background-image: 
-    radial-gradient(circle at 20% 50%, var(--light-blue) 2px, transparent 2px),
-    radial-gradient(circle at 80% 80%, var(--orange) 2px, transparent 2px),
-    radial-gradient(circle at 40% 20%, var(--light-light-green) 2px, transparent 2px);
-  background-size: 100px 100px;
-  pointer-events: none;
-  z-index: 0;
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.05;
+    background-image:
+        radial-gradient(circle at 20% 50%, var(--light-blue) 2px, transparent 2px),
+        radial-gradient(circle at 80% 80%, var(--orange) 2px, transparent 2px),
+        radial-gradient(circle at 40% 20%, var(--light-light-green) 2px, transparent 2px);
+    background-size: 100px 100px;
+    pointer-events: none;
+    z-index: 0;
 }

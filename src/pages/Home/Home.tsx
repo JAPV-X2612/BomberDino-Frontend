@@ -33,7 +33,7 @@ export const Home: FC = () => {
       <div className="dino-top-right"></div>
       <div className="dino-bottom-left"></div>
       <div className="dino-bottom-right"></div>
-      
+
       {!showOptions ? (
         <>
           <h1 className="game-title">BomberDino</h1>
@@ -53,9 +53,7 @@ export const Home: FC = () => {
         <>
           <h1 className="game-title">¡Empieza a Jugar!</h1>
           <div className="options-section">
-            <Button onClick={handleCreateRoom}>
-              Crear Sala
-            </Button>
+            <Button onClick={handleCreateRoom}>Crear Sala</Button>
             <div className="join-section">
               <Button onClick={handleJoinRoom} variant="secondary">
                 Entrar a Sala

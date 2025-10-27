@@ -29,22 +29,21 @@
   min-width: 150px;
 }
 
-/* Usando variables CSS de index.css */
-.player-hud-blue { 
-  border-color: var(--light-blue); 
-  background: linear-gradient(135deg, rgba(56, 194, 241, 0.2), rgba(56, 194, 241, 0.1)); 
+.player-hud-blue {
+  border-color: var(--light-blue);
+  background: linear-gradient(135deg, rgba(56, 194, 241, 0.2), rgba(56, 194, 241, 0.1));
 }
-.player-hud-green { 
-  border-color: var(--light-light-green); 
-  background: linear-gradient(135deg, rgba(121, 185, 63, 0.2), rgba(121, 185, 63, 0.1)); 
+.player-hud-green {
+  border-color: var(--light-light-green);
+  background: linear-gradient(135deg, rgba(121, 185, 63, 0.2), rgba(121, 185, 63, 0.1));
 }
-.player-hud-orange { 
-  border-color: var(--orange); 
-  background: linear-gradient(135deg, rgba(229, 126, 41, 0.2), rgba(229, 126, 41, 0.1)); 
+.player-hud-orange {
+  border-color: var(--orange);
+  background: linear-gradient(135deg, rgba(229, 126, 41, 0.2), rgba(229, 126, 41, 0.1));
 }
-.player-hud-purple { 
-  border-color: var(--purple); 
-  background: linear-gradient(135deg, rgba(152, 63, 148, 0.2), rgba(152, 63, 148, 0.1)); 
+.player-hud-purple {
+  border-color: var(--purple);
+  background: linear-gradient(135deg, rgba(152, 63, 148, 0.2), rgba(152, 63, 148, 0.1));
 }
 
 .player-hud.dead {
@@ -60,11 +59,18 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Usando variables CSS de index.css */
-.player-hud-blue .player-hud-icon { background-color: var(--light-blue); }
-.player-hud-green .player-hud-icon { background-color: var(--light-light-green); }
-.player-hud-orange .player-hud-icon { background-color: var(--orange); }
-.player-hud-purple .player-hud-icon { background-color: var(--purple); }
+.player-hud-blue .player-hud-icon {
+  background-color: var(--light-blue);
+}
+.player-hud-green .player-hud-icon {
+  background-color: var(--light-light-green);
+}
+.player-hud-orange .player-hud-icon {
+  background-color: var(--orange);
+}
+.player-hud-purple .player-hud-icon {
+  background-color: var(--purple);
+}
 
 .player-hud-info {
   display: flex;
@@ -94,17 +100,12 @@
   .hud-container {
     padding: 10px 15px;
   }
-  
-  /* .timer {
-    font-size: 1.5rem;
-    padding: 6px 15px;
-  } */
-  
+
   .player-hud {
     min-width: 120px;
     padding: 6px 10px;
   }
-  
+
   .player-hud-icon {
     width: 28px;
     height: 28px;

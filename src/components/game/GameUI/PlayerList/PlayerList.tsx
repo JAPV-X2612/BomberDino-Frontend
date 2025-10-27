@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player } from '@/types/game-types';
+import type { Player } from '@/types/game-types';
 import './PlayerList.css';
 
 interface PlayerListProps {
@@ -12,7 +12,9 @@ export const PlayerList: React.FC<PlayerListProps> = ({ players, maxPlayers }) =
 
   return (
     <div className="player-list">
-      <h3 className="player-list-title">Jugadores ({players.length}/{maxPlayers})</h3>
+      <h3 className="player-list-title">
+        Jugadores ({players.length}/{maxPlayers})
+      </h3>
       <div className="players-grid">
         {players.map((player) => (
           <div key={player.id} className={`player-card player-${player.color}`}>
@@ -22,7 +24,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ players, maxPlayers }) =
           </div>
         ))}
         {Array.from({ length: emptySlots }).map((_, index) => (
-          <div key={`empty-${index}`} className="player-card player-empty">
+          <div key={`empty-slot-${index + players.length}`} className="player-card player-empty">
             <span className="empty-text">Esperando...</span>
           </div>
         ))}

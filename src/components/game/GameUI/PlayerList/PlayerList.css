@@ -30,10 +30,18 @@
   transition: all 0.3s ease;
 }
 
-.player-blue { border-color: var(--light-blue); }
-.player-green { border-color: var(--light-light-green); }
-.player-orange { border-color: var(--orange); }
-.player-purple { border-color: var(--purple); }
+.player-blue {
+  border-color: var(--light-blue);
+}
+.player-green {
+  border-color: var(--light-light-green);
+}
+.player-orange {
+  border-color: var(--orange);
+}
+.player-purple {
+  border-color: var(--purple);
+}
 
 .player-dino-icon {
   width: 60px;
@@ -42,10 +50,18 @@
   background-color: currentColor;
 }
 
-.player-blue .player-dino-icon { background-color: var(--light-blue); }
-.player-green .player-dino-icon { background-color: var(--light-light-green); }
-.player-orange .player-dino-icon { background-color: var(--orange); }
-.player-purple .player-dino-icon { background-color: var(--purple); }
+.player-blue .player-dino-icon {
+  background-color: var(--light-blue);
+}
+.player-green .player-dino-icon {
+  background-color: var(--light-light-green);
+}
+.player-orange .player-dino-icon {
+  background-color: var(--orange);
+}
+.player-purple .player-dino-icon {
+  background-color: var(--purple);
+}
 
 .player-name {
   font-weight: 700;

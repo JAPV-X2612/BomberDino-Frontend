@@ -6,7 +6,6 @@
   overflow: hidden;
 }
 
-/* Header con logo y código */
 .lobby-header {
   display: flex;
   justify-content: space-between;
@@ -18,7 +17,7 @@
 
 .lobby-logo {
   font-size: 2.5rem;
-  font-family: var(--font-title);
+  font-family: var(--font-title), serif;
   font-weight: 900;
   color: var(--white);
   margin: 0;
@@ -28,7 +27,7 @@
 .room-code {
   font-size: 2rem;
   font-weight: 900;
-  font-family: var(--font-title);
+  font-family: var(--font-title), serif;
   color: var(--white);
   background: rgba(255, 255, 255, 0.15);
   padding: 10px 30px;
@@ -43,7 +42,6 @@
   transform: scale(1.05);
 }
 
-/* Contenido principal */
 .lobby-content {
   flex: 1;
   display: flex;
@@ -54,7 +52,6 @@
   padding: 40px;
 }
 
-/* Contenedor de jugadores */
 .players-container {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -63,7 +60,6 @@
   max-width: 1400px;
 }
 
-/* Tarjeta de jugador */
 .player-card {
   display: flex;
   flex-direction: column;
@@ -118,7 +114,6 @@
   opacity: 0.5;
 }
 
-/* Botón de listo */
 .ready-btn {
   width: 100%;
   padding: 15px;
@@ -126,7 +121,7 @@
   font-weight: 900;
   border-radius: 12px;
   border: none;
-  font-family: var(--font-main);
+  font-family: var(--font-main), serif;
   cursor: pointer;
   transition: all 0.3s;
   text-transform: uppercase;
@@ -148,7 +143,6 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Botón iniciar */
 .start-btn {
   font-size: 1.8rem !important;
   padding: 20px 60px !important;
@@ -157,11 +151,15 @@
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
-/* Responsive */
 @media (max-width: 1200px) {
   .players-container {
     grid-template-columns: repeat(2, 1fr);

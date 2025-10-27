@@ -17,7 +17,6 @@ export const Lobby: React.FC = () => {
   const [currentPlayerId] = useState(`player_${Date.now()}`);
   const [players, setPlayers] = useState<Player[]>([]);
 
-  // Inicializar sala
   React.useEffect(() => {
     const playerName = localStorage.getItem('playerName');
     if (!playerName) {
@@ -25,13 +24,12 @@ export const Lobby: React.FC = () => {
       return;
     }
 
-    // Generar código de sala
-    const code = Array.from({ length: 6 }, () => 
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]
+    const code = Array.from(
+      { length: 6 },
+      () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)],
     ).join('');
     setRoomCode(code);
 
-    // Agregar jugador actual
     const newPlayer: Player = {
       id: currentPlayerId,
       name: playerName,
@@ -42,12 +40,10 @@ export const Lobby: React.FC = () => {
   }, [navigate, currentPlayerId]);
 
   const toggleReady = (playerId: string) => {
-    setPlayers(players.map(p => 
-      p.id === playerId ? { ...p, ready: !p.ready } : p
-    ));
+    setPlayers(players.map((p) => (p.id === playerId ? { ...p, ready: !p.ready } : p)));
   };
 
-  const allReady = players.every(p => p.ready);
+  const allReady = players.every((p) => p.ready);
 
   const handleStart = () => {
     if (allReady) {
@@ -66,12 +62,8 @@ export const Lobby: React.FC = () => {
           {player ? (
             <>
               <div className="player-name">{player.name}</div>
-              <img 
-                src={getDinoImage(player.color)} 
-                alt={player.name}
-                className="player-avatar"
-              />
-              <button 
+              <img src={getDinoImage(player.color)} alt={player.name} className="player-avatar" />
+              <button
                 className={`ready-btn ${player.ready ? 'ready' : 'not-ready'}`}
                 onClick={() => toggleReady(player.id)}
               >
@@ -84,7 +76,7 @@ export const Lobby: React.FC = () => {
               <div className="player-avatar-empty">?</div>
             </>
           )}
-        </div>
+        </div>,
       );
     }
     return slots;
@@ -100,9 +92,7 @@ export const Lobby: React.FC = () => {
       </header>
 
       <div className="lobby-content">
-        <div className="players-container">
-          {renderPlayerSlots()}
-        </div>
+        <div className="players-container">{renderPlayerSlots()}</div>
 
         {allReady && players.length >= 1 && (
           <Button onClick={handleStart} variant="primary">
