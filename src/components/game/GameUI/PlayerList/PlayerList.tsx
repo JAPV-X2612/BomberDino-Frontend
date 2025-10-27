@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player } from '@/types/game-types';
+import type { Player } from '@/types/game-types';
 import './PlayerList.css';
 
 interface PlayerListProps {
