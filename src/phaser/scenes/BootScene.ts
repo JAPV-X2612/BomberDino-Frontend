@@ -7,10 +7,10 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     // Load dinosaur images
-    this.load.image('player-blue', '/public/assets/images/avatars/dino-blue.png');
-    this.load.image('player-green', '/public/assets/images/avatars/dino-green.png');
-    this.load.image('player-orange', '/public/assets/images/avatars/dino-orange.png');
-    this.load.image('player-purple', '/public/assets/images/avatars/dino-purple.png');
+    this.load.image('player-blue', '/assets/images/avatars/dino-blue.png');
+    this.load.image('player-green', '/assets/images/avatars/dino-green.png');
+    this.load.image('player-orange', '/assets/images/avatars/dino-orange.png');
+    this.load.image('player-purple', '/assets/images/avatars/dino-purple.png');
 
     // Create other game assets
     this.createGameAssets();

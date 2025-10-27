@@ -51,7 +51,7 @@ export const Lobby: React.FC = () => {
     }
   };
 
-  const getDinoImage = (color: DinoColor) => `/dinos/dino-${color}.png`;
+  const getDinoImage = (color: DinoColor) => `/assets/images/avatars/dino-${color}.png`;
 
   const renderPlayerSlots = () => {
     const slots = [];
