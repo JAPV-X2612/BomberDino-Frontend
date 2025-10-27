@@ -60,16 +60,21 @@ export class Player {
     const gridX = Math.round(x / this.cellSize);
     const gridY = Math.round(y / this.cellSize);
 
-    const blocks = this.scene.children.list.filter(
-      (obj: any) =>
-        obj.getData &&
-        (obj.getData('blockType') === 'indestructible' ||
-          obj.getData('blockType') === 'destructible'),
-    );
+    const blocks = this.scene.children.list.filter((obj) => {
+      const gameObj = obj as Phaser.GameObjects.Rectangle & {
+        getData?: (key: string) => string;
+      };
+      return (
+        gameObj.getData &&
+        (gameObj.getData('blockType') === 'indestructible' ||
+          gameObj.getData('blockType') === 'destructible')
+      );
+    });
 
     for (const block of blocks) {
-      const blockGridX = Math.round((block as any).x / this.cellSize);
-      const blockGridY = Math.round((block as any).y / this.cellSize);
+      const b = block as Phaser.GameObjects.Rectangle;
+      const blockGridX = Math.round(b.x / this.cellSize);
+      const blockGridY = Math.round(b.y / this.cellSize);
 
       if (blockGridX === gridX && blockGridY === gridY) {
         return false;
