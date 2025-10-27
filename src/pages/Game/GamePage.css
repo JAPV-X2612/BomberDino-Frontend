@@ -1,0 +1,9 @@
+.game-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #087958;
+  overflow: hidden;
+}
