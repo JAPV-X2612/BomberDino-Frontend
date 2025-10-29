@@ -106,7 +106,7 @@ export const GamePage: FC = () => {
   return (
     <div className="game-page">
       <Hud players={players} timeRemaining={timeRemaining} />
-      <GameCanvas sessionId={sessionId} playerId={playerId} />
+      <GameCanvas />
     </div>
   );
 };
