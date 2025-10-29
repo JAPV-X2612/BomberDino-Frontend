@@ -9,7 +9,6 @@ export class GameOverScene extends Phaser.Scene {
         const { width, height } = this.cameras.main;
 
         this.add.rectangle(width / 2, height / 2, width, height, 0x087958);
-        // Título principal estilo BomberDino
         const title = this.add.text(width / 2, height * 0.15, 'GANADOR', {
             fontSize: '96px',
             color: '#FFFFFF',
@@ -28,22 +27,18 @@ export class GameOverScene extends Phaser.Scene {
             ease: 'Bounce.easeOut',
         });
 
-        // Avatar del dinosaurio ganador
         if (data.winner) {
             this.createWinnerAvatar(width / 2, height * 0.45, data.winner);
         }
 
-        // Botones
         this.createButtons(width, height);
 
-        // Fade in
         this.cameras.main.fadeIn(500, 0, 0, 0);
     }
 
     private createWinnerAvatar(x: number, y: number, playerId: string): void {
         const container = this.add.container(x, y);
 
-        // Colores y nombres de dinosaurios
         const dinoData: { [key: string]: { color: number; name: string } } = {
             'player-0': { color: 0x4a9eff, name: 'DINO AZUL' },
             'player-1': { color: 0x7ccd7c, name: 'DINO VERDE' },
@@ -53,7 +48,6 @@ export class GameOverScene extends Phaser.Scene {
 
         const data = dinoData[playerId] || { color: 0xffd700, name: 'GANADOR' };
 
-        // Círculo de victoria con rayos
         const rays = this.add.star(0, 0, 12, 30, 150, 0xffd700, 0.3);
         this.tweens.add({
             targets: rays,
@@ -62,16 +56,13 @@ export class GameOverScene extends Phaser.Scene {
             repeat: -1,
         });
 
-        // Plataforma de ganador
         const platform = this.add.ellipse(0, 80, 200, 40, 0x8b4513, 0.6);
 
-        // Avatar del dinosaurio (imagen cargada)
         const dinoColor = ['blue', 'green', 'orange', 'purple'][
             parseInt(playerId.split('-')[1]) || 0
         ];
         const textureName = `player-${dinoColor}`;
 
-        // Cargar imagen del dinosaurio
         let dino: Phaser.GameObjects.GameObject;
         if (this.textures.exists(textureName)) {
             const dinoImage = this.add.image(0, 0, textureName);
@@ -79,13 +70,11 @@ export class GameOverScene extends Phaser.Scene {
             dinoImage.setOrigin(0.5);
             dino = dinoImage;
         } else {
-            // Fallback: círculo grande de color
             const dinoCircle = this.add.circle(0, 0, 110, data.color);
             dinoCircle.setStrokeStyle(8, 0xffffff);
             dino = dinoCircle;
         }
 
-        // Animación de salto
         this.tweens.add({
             targets: dino,
             y: -20,
@@ -95,12 +84,10 @@ export class GameOverScene extends Phaser.Scene {
             repeat: -1,
         });
 
-        // Corona sobre el dino
         const crown = this.createCrown(0, -100);
 
         container.add([rays, platform, dino, crown]);
 
-        // Efecto de aparición
         container.setScale(0);
         this.tweens.add({
             targets: container,
@@ -114,7 +101,6 @@ export class GameOverScene extends Phaser.Scene {
     private createCrown(x: number, y: number): Phaser.GameObjects.Container {
         const crown = this.add.container(x, y);
 
-        // Corona con estilo prehistórico
         const base = this.add.polygon(
             0,
             0,
@@ -123,14 +109,12 @@ export class GameOverScene extends Phaser.Scene {
         );
         base.setStrokeStyle(3, 0xff8c00);
 
-        // Huevos de dinosaurio como joyas
         const egg1 = this.add.ellipse(-18, -8, 12, 15, 0xff6347);
         const egg2 = this.add.ellipse(0, -18, 12, 15, 0x32cd32);
         const egg3 = this.add.ellipse(18, -8, 12, 15, 0x1e90ff);
 
         crown.add([base, egg1, egg2, egg3]);
 
-        // Animación de brillo
         this.tweens.add({
             targets: crown,
             angle: { from: -8, to: 8 },
@@ -144,7 +128,6 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     private createVolcano(x: number, y: number): void {
-        // Lava burbujeante
         for (let i = 0; i < 3; i++) {
             const bubble = this.add.circle(
                 x + Phaser.Math.Between(-20, 20),
@@ -195,7 +178,6 @@ export class GameOverScene extends Phaser.Scene {
             const x = Phaser.Math.Between(0, width);
             const meteor = this.add.circle(x, -50, 8, Phaser.Utils.Array.GetRandom(colors));
 
-            // Estela del meteoro
             const trail = this.add.rectangle(x, -50, 3, 20, 0xff4500, 0.5);
 
             this.tweens.add({
@@ -211,7 +193,6 @@ export class GameOverScene extends Phaser.Scene {
     private createDinoFootprint(x: number, y: number): void {
         const footprint = this.add.container(x, y);
 
-        // Huella grande
         const heel = this.add.ellipse(0, 20, 80, 100, 0x654321, 0.1);
         const toe1 = this.add.ellipse(-30, -20, 30, 50, 0x654321, 0.1);
         const toe2 = this.add.ellipse(0, -30, 30, 50, 0x654321, 0.1);
@@ -222,7 +203,6 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     private createButtons(width: number, height: number): void {
-        // Botón Menú con huella
         this.createButton(
             width / 2,
             height * 0.75,

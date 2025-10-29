@@ -5,7 +5,7 @@ import { GameOverScene } from './scenes/GameOverScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 672, // 12 cells * 56px
+  width: 672,
   height: 672,
   backgroundColor: '#D4A574',
   physics: {

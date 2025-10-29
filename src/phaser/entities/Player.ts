@@ -6,7 +6,6 @@ export class Player {
   private readonly playerId: string;
   private lives: number = 3;
   private readonly cellSize: number;
-  private isMoving: boolean = false;
   private readonly spawnX: number;
   private readonly spawnY: number;
   private isInvulnerable: boolean = false;
@@ -26,77 +25,8 @@ export class Player {
     this.spawnY = y;
 
     this.sprite = scene.physics.add.sprite(x, y, texture);
+    this.sprite.setDisplaySize(this.cellSize * 0.8, this.cellSize * 0.8);
     this.sprite.setCollideWorldBounds(true);
-  }
-
-  handleInput(cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
-    if (this.isMoving || !this.isAlive()) return;
-
-    let targetX = this.sprite.x;
-    let targetY = this.sprite.y;
-
-    if (Phaser.Input.Keyboard.JustDown(cursors.left)) {
-      targetX -= this.cellSize;
-    } else if (Phaser.Input.Keyboard.JustDown(cursors.right)) {
-      targetX += this.cellSize;
-    } else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
-      targetY -= this.cellSize;
-    } else if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
-      targetY += this.cellSize;
-    } else {
-      return;
-    }
-
-    if (this.canMoveTo(targetX, targetY)) {
-      this.moveToCell(targetX, targetY);
-    }
-  }
-
-  private canMoveTo(x: number, y: number): boolean {
-    const boardSize = 12 * this.cellSize;
-    if (x < this.cellSize / 2 || x > boardSize - this.cellSize / 2) return false;
-    if (y < this.cellSize / 2 || y > boardSize - this.cellSize / 2) return false;
-
-    const gridX = Math.round(x / this.cellSize);
-    const gridY = Math.round(y / this.cellSize);
-
-    const blocks = this.scene.children.list.filter((obj) => {
-      const gameObj = obj as Phaser.GameObjects.Rectangle & {
-        getData?: (key: string) => string;
-      };
-      return (
-        gameObj.getData &&
-        (gameObj.getData('blockType') === 'indestructible' ||
-          gameObj.getData('blockType') === 'destructible')
-      );
-    });
-
-    for (const block of blocks) {
-      const b = block as Phaser.GameObjects.Rectangle;
-      const blockGridX = Math.round(b.x / this.cellSize);
-      const blockGridY = Math.round(b.y / this.cellSize);
-
-      if (blockGridX === gridX && blockGridY === gridY) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private moveToCell(targetX: number, targetY: number): void {
-    this.isMoving = true;
-
-    this.scene.tweens.add({
-      targets: this.sprite,
-      x: targetX,
-      y: targetY,
-      duration: 150,
-      ease: 'Linear',
-      onComplete: () => {
-        this.isMoving = false;
-      },
-    });
   }
 
   takeDamage(): void {
@@ -145,5 +75,9 @@ export class Player {
 
   getPlayerId(): string {
     return this.playerId;
+  }
+
+  getLives(): number {
+    return this.lives;
   }
 }
