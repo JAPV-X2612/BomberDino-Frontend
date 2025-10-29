@@ -23,7 +23,6 @@ export class GameScene extends Phaser.Scene {
   private readonly powerUps: Map<string, Phaser.GameObjects.Image> = new Map();
   private blocks: Phaser.GameObjects.Group | null = null;
 
-  private sessionId: string = '';
   private localPlayerId: string = '';
   private gameActions: GameActions | null = null;
 
@@ -35,11 +34,10 @@ export class GameScene extends Phaser.Scene {
   private readonly bombCooldown: number = 500;
 
   constructor() {
-    super({ key: 'GameScene' });
+    super({key: 'GameScene'});
   }
 
-  setSessionContext(sessionId: string, playerId: string): void {
-    this.sessionId = sessionId;
+  setSessionContext(playerId: string): void {
     this.localPlayerId = playerId;
   }
 
