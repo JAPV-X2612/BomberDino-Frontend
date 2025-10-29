@@ -1,36 +1,36 @@
-import type { FC } from 'react';
-import type { Player } from '@/types/game-types';
+import { type FC } from 'react';
 import './HUD.css';
 
-interface HUDProps {
-  players: Player[];
-  timeRemaining: number;
+interface Player {
+    id: string;
+    name: string;
+    lives: number;
+    isAlive: boolean;
 }
 
-export const Hud: FC<HUDProps> = ({ players, timeRemaining }) => {
-  return (
-    <div className="hud-container">
-      <div className="players-status">
-        {players.map((player) => (
-          <div
-            key={player.id}
-            className={`player-hud player-hud-${player.color} ${!player.isAlive ? 'dead' : ''}`}
-          >
-            <div className="player-hud-icon"></div>
-            <div className="player-hud-info">
-              <span className="player-hud-name">{player.name}</span>
-              <div className="lives">
-                {Array.from({ length: player.lives }).map((_, i) => (
-                  <span key={`${player.id}-heart-${i}`} className="heart">
-                    ❤️
-                  </span>
+interface HudProps {
+    players: Player[];
+    timeRemaining: number;
+}
+
+export const Hud: FC<HudProps> = ({ players, timeRemaining }) => {
+    const formatTime = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div className="hud-container">
+            <div className="hud-timer">{formatTime(timeRemaining)}</div>
+            <div className="hud-players">
+                {players.map((player) => (
+                    <div key={player.id} className={`hud-player ${!player.isAlive ? 'dead' : ''}`}>
+                        <span className="hud-player-name">{player.name}</span>
+                        <span className="hud-player-lives">❤️ x{player.lives}</span>
+                    </div>
                 ))}
-              </div>
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="time-remaining">Time Remaining: {timeRemaining}s</div>
-    </div>
-  );
+        </div>
+    );
 };
