@@ -81,5 +81,6 @@ export const GamePage: FC = () => {
             <GameCanvas />
         </div>
     );
-};
+}; // Comment
+
 
