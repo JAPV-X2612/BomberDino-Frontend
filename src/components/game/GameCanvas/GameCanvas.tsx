@@ -31,7 +31,7 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
       const scene = gameRef.current!.scene.getScene('GameScene') as GameScene;
       if (scene) {
         sceneRef.current = scene;
-        scene.setSessionContext(sessionId, playerId);
+        scene.setSessionContext(playerId);
         scene.setGameActions({
           sendMove,
           placeBomb,
