@@ -21,7 +21,7 @@ export const Lobby: React.FC = () => {
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
 
   useEffect(() => {
-    console.log('🔍 GameState:', gameState);
+    console.log('ðŸ” GameState:', gameState);
   }, [gameState]);
 
   useEffect(() => {
