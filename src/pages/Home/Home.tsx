@@ -30,7 +30,13 @@ export const Home: FC = () => {
     try {
       const response = await createRoom(`${playerName}'s Room`, 4, 'default-map-001');
       localStorage.setItem('sessionId', response.roomId);
-      navigate(`/lobby?roomId=${response.roomId}`);
+
+      const playerId = localStorage.getItem('playerId') || `player_${Date.now()}`;
+      const username = localStorage.getItem('playerName') || 'Anonymous';
+      console.log(username);
+      await joinRoom(response.roomCode, playerId, username);
+
+      navigate(`/lobby?roomId=${response.roomCode}`);
     } catch (err) {
       setError('Error al crear la sala. Intenta de nuevo.');
       console.error('Error creating room:', err);
