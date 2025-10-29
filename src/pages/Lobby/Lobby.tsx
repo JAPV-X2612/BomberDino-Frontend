@@ -21,6 +21,10 @@ export const Lobby: React.FC = () => {
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
 
   useEffect(() => {
+    console.log('🔍 GameState:', gameState);
+  }, [gameState]);
+
+  useEffect(() => {
     const playerName = localStorage.getItem('playerName');
     if (!playerName) {
       navigate('/');

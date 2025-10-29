@@ -30,8 +30,21 @@ export interface JoinRoomRequest {
 export interface GameRoomResponse {
   roomId: string;
   roomName: string;
+  roomCode: string;
   status: GameStatus;
-  currentPlayers: number;
+  currentPlayers: PlayerDTO[];
   maxPlayers: number;
   isPrivate: boolean;
+}
+
+export interface PlayerDTO {
+  id: string;
+  username: string;
+  posX: number;
+  posY: number;
+  lifeCount: number;
+  status: PlayerStatus;
+  kills: number;
+  deaths: number;
+  hasShield: boolean;
 }

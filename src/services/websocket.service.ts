@@ -107,6 +107,7 @@ class WebSocketService {
     }
 
     const subscription = this.client.subscribe(destination, (message: IMessage) => {
+      console.log('📩 Mensaje recibido en', destination, ':', message.body); // 👈 Añade esto
       try {
         const data = JSON.parse(message.body) as T;
         handler(data);
