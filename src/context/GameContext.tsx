@@ -95,8 +95,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: null,
       });
 
-      setSessionId(response.roomId);
-      subscribeToSession(response.roomId);
+      setSessionId(response.roomCode);
+      subscribeToSession(response.roomCode);
 
       return response;
     },
