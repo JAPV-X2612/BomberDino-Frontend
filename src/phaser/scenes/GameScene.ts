@@ -288,6 +288,8 @@ export class GameScene extends Phaser.Scene {
           SPEED_UP: 'speed',
           BOMB_RANGE_UP: 'explosion',
           BOMB_COUNT_UP: 'bomb',
+          EXTRA_LIFE: 'heart',
+          TEMPORARY_SHIELD: 'shield',
         };
 
         const textureType = typeMap[dto.type] || 'speed';
@@ -304,6 +306,30 @@ export class GameScene extends Phaser.Scene {
         });
 
         this.powerUps.set(dto.id, powerUp);
+      }
+    });
+
+    this.checkPowerUpCollisions();
+  }
+
+  private checkPowerUpCollisions(): void {
+    if (!this.gameActions) return;
+
+    const localPlayer = this.players.get(this.localPlayerId);
+    if (!localPlayer || !localPlayer.isAlive()) return;
+
+    const playerSprite = localPlayer.getSprite();
+    const playerGridX = Math.round(playerSprite.x / this.cellSize);
+    const playerGridY = Math.round(playerSprite.y / this.cellSize);
+
+    this.powerUps.forEach((powerUpSprite, powerUpId) => {
+      const powerUpGridX = Math.round(powerUpSprite.x / this.cellSize);
+      const powerUpGridY = Math.round(powerUpSprite.y / this.cellSize);
+
+      // Si el jugador está en la misma celda que el power-up
+      if (playerGridX === powerUpGridX && playerGridY === powerUpGridY) {
+        console.log('💎 Collecting power-up:', powerUpId);
+        this.gameActions.collectPowerUp(powerUpId);
       }
     });
   }

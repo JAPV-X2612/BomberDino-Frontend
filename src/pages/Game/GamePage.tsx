@@ -39,6 +39,13 @@ export const GamePage: FC = () => {
 
   useEffect(() => {
     if (gameState && gameState.players.length > 0) {
+      console.log('🎮 GameState updated:', {
+        players: gameState.players.length,
+        bombs: gameState.bombs.length,
+        powerUps: gameState.powerUps.length,
+        phase: gameState.phase,
+      });
+
       const colors = [DinoColor.BLUE, DinoColor.GREEN, DinoColor.ORANGE, DinoColor.PURPLE];
 
       const mappedPlayers: GamePlayer[] = gameState.players.map((p: PlayerDTO, idx: number) => ({
