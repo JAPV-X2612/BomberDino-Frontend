@@ -53,7 +53,6 @@ export const GamePage: FC = () => {
     ]);
 
     useEffect(() => {
-        // Escuchar eventos de Phaser
         const updatePlayersWithDamage = (
             playersArr: typeof players,
             playerId: string,
@@ -78,7 +77,7 @@ export const GamePage: FC = () => {
 
     return (
         <div className="game-page">
-            <Hud players={players} />
+            <Hud players={players} timeRemaining={0} />
             <GameCanvas />
         </div>
     );
