@@ -29,7 +29,7 @@ export const Lobby: React.FC = () => {
 
     const roomId = searchParams.get('roomId') || sessionId;
     if (roomId) {
-      setRoomCode(roomId.substring(0, 8).toUpperCase());
+      setRoomCode(roomId.substring(0, 6).toUpperCase());
     }
   }, [navigate, searchParams, sessionId]);
 
@@ -59,42 +59,42 @@ export const Lobby: React.FC = () => {
     for (let i = 0; i < 4; i++) {
       const player = players[i];
       slots.push(
-          <div key={i} className={`player-card ${!player ? 'empty' : ''}`}>
-            {player ? (
-                <>
-                  <div className="player-name">{player.name}</div>
-                  <img src={getDinoImage(player.color)} alt={player.name} className="player-avatar" />
-                </>
-            ) : (
-                <>
-                  <div className="player-name empty-text">Esperando...</div>
-                  <div className="player-avatar-empty">?</div>
-                </>
-            )}
-          </div>
+        <div key={i} className={`player-card ${!player ? 'empty' : ''}`}>
+          {player ? (
+            <>
+              <div className="player-name">{player.name}</div>
+              <img src={getDinoImage(player.color)} alt={player.name} className="player-avatar" />
+            </>
+          ) : (
+            <>
+              <div className="player-name empty-text">Esperando...</div>
+              <div className="player-avatar-empty">?</div>
+            </>
+          )}
+        </div>,
       );
     }
     return slots;
   };
 
   return (
-      <div className="lobby-wrapper">
-        <header className="lobby-header">
-          <h1 className="lobby-logo">BomberDino</h1>
-          <div className="room-code" onClick={() => navigator.clipboard.writeText(sessionId || '')}>
-            {roomCode}
-          </div>
-        </header>
-
-        <div className="lobby-content">
-          <div className="players-container">{renderPlayerSlots()}</div>
-
-          {players.length >= 2 && (
-              <Button onClick={handleStartGame} variant="primary">
-                INICIAR JUEGO
-              </Button>
-          )}
+    <div className="lobby-wrapper">
+      <header className="lobby-header">
+        <h1 className="lobby-logo">BomberDino</h1>
+        <div className="room-code" onClick={() => navigator.clipboard.writeText(sessionId || '')}>
+          {roomCode}
         </div>
+      </header>
+
+      <div className="lobby-content">
+        <div className="players-container">{renderPlayerSlots()}</div>
+
+        {players.length >= 2 && (
+          <Button onClick={handleStartGame} variant="primary">
+            INICIAR JUEGO
+          </Button>
+        )}
       </div>
+    </div>
   );
 };

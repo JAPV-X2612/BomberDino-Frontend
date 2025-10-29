@@ -13,6 +13,7 @@ interface GameCanvasProps {
 export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<GameScene | null>(null);
   const { gameState, sendMove, placeBomb, collectPowerUp, onBombExploded, onPlayerKilled } =
     useGame();
 
@@ -22,51 +23,50 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
     const config: Phaser.Types.Core.GameConfig = {
       ...gameConfig,
       parent: containerRef.current,
-      scene: {
-        ...(gameConfig.scene as Phaser.Types.Scenes.SettingsConfig),
-        init: function () {
-          const gameScene = this as unknown as GameScene;
-          gameScene.setSessionContext(sessionId, playerId);
-          gameScene.setGameActions({
-            sendMove,
-            placeBomb,
-            collectPowerUp,
-          });
-        },
-      },
     };
 
     gameRef.current = new Phaser.Game(config);
+
+    gameRef.current.events.once('ready', () => {
+      const scene = gameRef.current!.scene.getScene('GameScene') as GameScene;
+      if (scene) {
+        sceneRef.current = scene;
+        scene.setSessionContext(sessionId, playerId);
+        scene.setGameActions({
+          sendMove,
+          placeBomb,
+          collectPowerUp,
+        });
+      }
+    });
 
     return () => {
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
+        sceneRef.current = null;
       }
     };
   }, [sessionId, playerId, sendMove, placeBomb, collectPowerUp]);
 
   useEffect(() => {
-    if (!gameRef.current || !gameState) return;
+    if (!sceneRef.current || !gameState) return;
 
-    const scene = gameRef.current.scene.getScene('GameScene') as GameScene;
-    if (scene?.scene.isActive()) {
-      scene.updateGameState(gameState);
+    if (sceneRef.current.scene.isActive()) {
+      sceneRef.current.updateGameState(gameState);
     }
   }, [gameState]);
 
   useEffect(() => {
     const unsubscribeBombExploded = onBombExploded((event) => {
-      const scene = gameRef.current?.scene.getScene('GameScene') as GameScene;
-      if (scene?.scene.isActive()) {
-        scene.handleBombExploded(event);
+      if (sceneRef.current?.scene.isActive()) {
+        sceneRef.current.handleBombExploded(event);
       }
     });
 
     const unsubscribePlayerKilled = onPlayerKilled((event) => {
-      const scene = gameRef.current?.scene.getScene('GameScene') as GameScene;
-      if (scene?.scene.isActive()) {
-        scene.handlePlayerKilled(event);
+      if (sceneRef.current?.scene.isActive()) {
+        sceneRef.current.handlePlayerKilled(event);
       }
     });
 
