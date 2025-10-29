@@ -1,7 +1,7 @@
 # 🎮 Bomber Dino Frontend
 
 <div align="center">
-  <img src="src/assets/images/bomber-dino-logo.png" alt="Bomber Dino Logo" width="70%">
+  <img src="/public/assets/images/ui/bomberdino-logo.png" alt="Bomber Dino Logo" width="35%">
 </div>
 
 <div align="center">

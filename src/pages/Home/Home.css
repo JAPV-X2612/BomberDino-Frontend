@@ -1,0 +1,131 @@
+.home-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  z-index: 1;
+}
+
+.game-title {
+  font-size: 6rem;
+  font-family: var(--font-title), serif;
+  font-weight: 800;
+  text-align: center;
+  color: var(--white);
+  text-shadow: 6px 6px 12px rgba(0, 0, 0, 0.4);
+  margin: 0;
+  z-index: 2;
+}
+
+.name-input-section {
+  background-color: var(--white);
+  padding: 30px 40px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 400px;
+  z-index: 2;
+}
+
+.name-input-section input {
+  font-family: var(--font-main), serif;
+  font-size: 1.3rem;
+}
+
+.name-input-section button {
+  font-family: var(--font-main), serif;
+  font-size: 1.3rem;
+}
+
+.options-section {
+  background-color: var(--white);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  width: 100%;
+  max-width: 450px;
+  z-index: 2;
+}
+
+.join-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.dino-top-left,
+.dino-top-right,
+.dino-bottom-left,
+.dino-bottom-right {
+  position: fixed;
+  width: auto;
+  height: auto;
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dino-top-left {
+  top: -150px;
+  left: -250px;
+  width: 700px;
+  height: 700px;
+  background-image: url('/assets/images/avatars/dino-orange.png');
+  transform: rotate(45deg);
+}
+
+.dino-top-right {
+  top: -100px;
+  right: -250px;
+  width: 600px;
+  height: 600px;
+  background-image: url('/assets/images/avatars/dino-blue.png');
+  transform: rotate(-30deg);
+}
+
+.dino-bottom-left {
+  bottom: -200px;
+  left: -150px;
+  width: 650px;
+  height: 650px;
+  background-image: url('/assets/images/avatars/dino-purple.png');
+  transform: rotate(-15deg);
+}
+
+.dino-bottom-right {
+  bottom: -150px;
+  right: -250px;
+  width: 650px;
+  height: 650px;
+  background-image: url('/assets/images/avatars/dino-green.png');
+  transform: rotate(20deg);
+}
+
+@media (max-width: 768px) {
+  .game-title {
+    font-size: 3.5rem;
+  }
+
+  .home-container {
+    padding: 20px;
+  }
+
+  .dino-top-left,
+  .dino-top-right,
+  .dino-bottom-left,
+  .dino-bottom-right {
+    width: 200px;
+    height: 200px;
+  }
+}

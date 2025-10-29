@@ -64,16 +64,6 @@ dist-ssr/
 .vite/
 *.local
 
-# Vite environment variables
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-
-# Keep example env file
-!.env.example
-
 
 
 
@@ -189,11 +179,6 @@ Temporary Items
 .nfs*
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
 .idea
 *.suo
 *.ntvs*
@@ -202,7 +187,6 @@ Temporary Items
 *.sw?
 *.swp
 *.swo
-*~
 
 # Temporary files
 *.tmp
@@ -254,7 +238,6 @@ $RECYCLE.BIN/
 *.iws
 *.iml
 *.ipr
-out/
 
 # User-specific stuff
 .idea/**/workspace.xml
@@ -310,9 +293,6 @@ out/
 .classpath
 bin/
 tmp/
-*.tmp
-*.bak
-*.swp
 *~.nib
 .loadpath
 .recommenders
@@ -419,16 +399,8 @@ public/workbox-*.js
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
-# yarn v2
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-.pnp.*
-
 # Temporary folders
 temp/
-tmp/
 
 # Lock files (keep only one)
 # Uncomment the one you DON'T use:
@@ -488,21 +460,14 @@ ui-debug.log
 #---------------------------#
 
 # Production build
-dist/
-build/
-out/
 .output/
 
 # Static site generators
 .cache/
-public/
 
 # Compiled binary addons
 build/Release
 
-# Gatsby files
-.cache/
-public
 
 
 

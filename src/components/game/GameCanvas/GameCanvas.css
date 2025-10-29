@@ -1,0 +1,20 @@
+.game-canvas {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 80%;
+  height: 80%;
+  padding: 8px;
+  background: transparent;
+  margin-top: 35px;
+  margin-left: 0;
+}
+
+.game-canvas canvas {
+  display: block;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+}
