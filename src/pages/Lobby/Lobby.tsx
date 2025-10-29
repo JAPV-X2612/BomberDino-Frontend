@@ -15,10 +15,20 @@ interface LobbyPlayer {
 export const Lobby: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { gameState, sessionId } = useGame();
+  const { gameState, sessionId, playerId, startGame, onGameStart } = useGame();
 
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
+  const [isStarting, setIsStarting] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onGameStart(() => {
+      console.log('Game started! Navigating to game...');
+      navigate('/game');
+    });
+
+    return unsubscribe;
+  }, [onGameStart, navigate]);
 
   useEffect(() => {
     console.log('🔍 GameState:', gameState);
@@ -52,8 +62,18 @@ export const Lobby: React.FC = () => {
     }
   }, [gameState]);
 
-  const handleStartGame = () => {
-    navigate('/game');
+  const handleStartGame = async () => {
+    if (!sessionId || !playerId) return;
+
+    setIsStarting(true);
+    try {
+      await startGame();
+      // La navegación se hará cuando llegue el evento via WebSocket
+    } catch (error) {
+      console.error('Error starting game:', error);
+      setIsStarting(false);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    }
   };
 
   const getDinoImage = (color: DinoColor) => `/assets/images/avatars/dino-${color}.png`;
@@ -94,8 +114,8 @@ export const Lobby: React.FC = () => {
         <div className="players-container">{renderPlayerSlots()}</div>
 
         {players.length >= 2 && (
-          <Button onClick={handleStartGame} variant="primary">
-            INICIAR JUEGO
+          <Button onClick={handleStartGame} variant="primary" disabled={isStarting}>
+            {isStarting ? 'INICIANDO...' : 'INICIAR JUEGO'}
           </Button>
         )}
       </div>

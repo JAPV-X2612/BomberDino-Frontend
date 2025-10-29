@@ -19,6 +19,12 @@ class GameApiService {
     return response.data;
   }
 
+  async startGame(sessionId: string, playerId: string): Promise<void> {
+    await apiClient.post(`${this.basePath}/rooms/${sessionId}/start`, null, {
+      params: { playerId },
+    });
+  }
+
   async getRoomsByStatus(status: GameStatus): Promise<GameRoomResponse[]> {
     const response = await apiClient.get<GameRoomResponse[]>(`${this.basePath}/rooms`, {
       params: { status },
