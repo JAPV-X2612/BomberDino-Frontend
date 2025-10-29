@@ -319,6 +319,30 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(3000, () => {
       this.explodeBomb(bomb, pos.x, pos.y);
     });
+
+    this.checkPowerUpCollisions();
+  }
+
+  private checkPowerUpCollisions(): void {
+    if (!this.gameActions) return;
+
+    const localPlayer = this.players.get(this.localPlayerId);
+    if (!localPlayer || !localPlayer.isAlive()) return;
+
+    const playerSprite = localPlayer.getSprite();
+    const playerGridX = Math.round(playerSprite.x / this.cellSize);
+    const playerGridY = Math.round(playerSprite.y / this.cellSize);
+
+    this.powerUps.forEach((powerUpSprite, powerUpId) => {
+      const powerUpGridX = Math.round(powerUpSprite.x / this.cellSize);
+      const powerUpGridY = Math.round(powerUpSprite.y / this.cellSize);
+
+      // Si el jugador está en la misma celda que el power-up
+      if (playerGridX === powerUpGridX && playerGridY === powerUpGridY) {
+        console.log('💎 Collecting power-up:', powerUpId);
+        this.gameActions.collectPowerUp(powerUpId);
+      }
+    });
   }
 
   private explodeBomb(bomb: Phaser.GameObjects.Container, gridX: number, gridY: number): void {

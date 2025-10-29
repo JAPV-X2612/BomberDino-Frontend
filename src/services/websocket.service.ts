@@ -8,6 +8,8 @@ import type {
   BombExplodedEvent,
   PlayerKilledEvent,
   PowerUpCollectedEvent,
+  StartGameRequest,
+  GameStartNotification,
 } from '@/types/websocket-types';
 
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080'; // TODO: Validate URL from deployment
@@ -73,6 +75,17 @@ class WebSocketService {
     this.subscribe(`/topic/game/${sessionId}/state`, handler);
   }
 
+  subscribeToGameStart(
+    sessionId: string,
+    callback: (notification: GameStartNotification) => void,
+  ): void {
+    const destination = `/topic/game/${sessionId}/start`;
+    this.client?.subscribe(destination, (message) => {
+      const notification = JSON.parse(message.body) as GameStartNotification;
+      callback(notification);
+    });
+  }
+
   subscribeToPlayerKilled(sessionId: string, handler: MessageHandler<PlayerKilledEvent>): void {
     this.subscribe(`/topic/game/${sessionId}/kill`, handler);
   }
@@ -127,6 +140,10 @@ class WebSocketService {
       this.subscriptions.delete(destination);
       console.log(`Unsubscribed from ${destination}`);
     }
+  }
+
+  sendStartGame(request: StartGameRequest) {
+    this.send(`/app/room/${request.sessionId}/start`, request);
   }
 
   sendPlayerMove(request: PlayerMoveRequest): void {
