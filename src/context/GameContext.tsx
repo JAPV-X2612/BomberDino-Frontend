@@ -18,6 +18,8 @@ interface GameContextValue {
   isConnected: boolean;
   createRoom: (roomName: string, maxPlayers: number, mapId?: string) => Promise<GameRoomResponse>;
   joinRoom: (roomId: string, pid: string, username: string) => Promise<GameRoomResponse>;
+  startGame: () => Promise<void>;
+  onGameStart: (callback: () => void) => () => void;
   leaveRoom: () => Promise<void>;
   sendMove: (direction: PlayerMoveRequest['direction']) => void;
   placeBomb: (position: PlaceBombRequest['position']) => void;
@@ -42,6 +44,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameStateUpdate | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [gameStartCallbacks] = useState<Set<() => void>>(new Set());
 
   const [bombExplodedCallbacks] = useState<Set<(event: BombExplodedEvent) => void>>(new Set());
   const [playerKilledCallbacks] = useState<Set<(event: PlayerKilledEvent) => void>>(new Set());
@@ -81,8 +84,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       webSocketService.subscribeToPlayerDisconnect(sid, (data) => {
         console.log('Player disconnected:', data.playerId);
       });
+
+      webSocketService.subscribeToGameStart(sid, (notification) => {
+        console.log('Game starting!', notification);
+        setGameState(notification.initialState);
+        gameStartCallbacks.forEach((cb) => cb());
+      });
     },
-    [bombExplodedCallbacks, playerKilledCallbacks, powerUpCollectedCallbacks],
+    [bombExplodedCallbacks, gameStartCallbacks, playerKilledCallbacks, powerUpCollectedCallbacks],
   );
 
   const createRoom = useCallback(
@@ -95,8 +104,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: null,
       });
 
-      setSessionId(response.roomId);
-      subscribeToSession(response.roomId);
+      setSessionId(response.roomCode);
+      subscribeToSession(response.roomCode);
 
       return response;
     },
@@ -119,6 +128,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return response;
     },
     [subscribeToSession],
+  );
+
+  const startGame = useCallback(async () => {
+    if (!sessionId || !playerId) return;
+    await gameApiService.startGame(sessionId, playerId);
+  }, [sessionId, playerId]);
+
+  const onGameStart = useCallback(
+    (callback: () => void): (() => void) => {
+      gameStartCallbacks.add(callback);
+      return () => {
+        gameStartCallbacks.delete(callback);
+      };
+    },
+    [gameStartCallbacks],
   );
 
   const leaveRoom = useCallback(async () => {
@@ -211,6 +235,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     onBombExploded,
     onPlayerKilled,
     onPowerUpCollected,
+    startGame,
+    onGameStart,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
