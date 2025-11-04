@@ -31,7 +31,7 @@ export const Lobby: React.FC = () => {
   }, [onGameStart, navigate]);
 
   useEffect(() => {
-    console.log('🔍 GameState:', gameState);
+    console.log('ðŸ” GameState:', gameState);
   }, [gameState]);
 
   useEffect(() => {
