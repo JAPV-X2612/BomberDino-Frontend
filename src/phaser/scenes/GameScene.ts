@@ -28,26 +28,6 @@ export class GameScene extends Phaser.Scene {
     this.localPlayerId = playerId;
   }
 
-  setGameActions(actions: {
-    sendMove?: (direction: string) => void;
-    placeBomb?: () => void;
-    collectPowerUp?: (powerUpId: string) => void;
-  }): void {
-    // Placeholder
-  }
-
-  updateGameState(state: any): void {
-    // Placeholder
-  }
-
-  handleBombExploded(event: { bombId: string; x: number; y: number; range: number }): void {
-    // Placeholder
-  }
-
-  handlePlayerKilled(event: { playerId: string; killerId?: string }): void {
-    // Placeholder
-  }
-
   create(): void {
     console.log('GameScene: Create called');
 

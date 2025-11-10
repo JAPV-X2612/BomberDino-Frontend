@@ -32,11 +32,6 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
       if (scene) {
         sceneRef.current = scene;
         scene.setSessionContext(sessionId, playerId);
-        scene.setGameActions({
-          sendMove,
-          placeBomb,
-          collectPowerUp,
-        });
       }
     });
 
