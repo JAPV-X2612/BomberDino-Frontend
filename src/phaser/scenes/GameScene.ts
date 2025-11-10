@@ -11,7 +11,6 @@ export class GameScene extends Phaser.Scene {
   private readonly CELL_SIZE = 56;
   private readonly BOARD_SIZE = 12;
 
-  // Propiedades para contexto multiplayer
   private sessionId?: string;
   private localPlayerId?: string;
 
