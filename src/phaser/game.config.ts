@@ -7,7 +7,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 672,
   height: 672,
-  backgroundColor: '#3e9e57',
+  backgroundColor: '#D4A574',
   physics: {
     default: 'arcade',
     arcade: {
@@ -19,19 +19,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 672,
-    height: 672,
-    min: {
-      width: 672,
-      height: 672,
-    },
-    max: {
-      width: 1344,
-      height: 1344,
-    },
-  },
-  render: {
-    pixelArt: true,
-    antialias: false,
   },
 };

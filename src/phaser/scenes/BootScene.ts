@@ -6,52 +6,19 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    console.log('BootScene: Starting preload...');
-    this.createGameAssets();
-    this.load.on('loaderror', (file: Phaser.Loader.File) => {
-      console.error('Error loading file:', file.key, file.src);
-    });
-
     this.load.image('player-blue', '/assets/images/avatars/dino-blue.png');
     this.load.image('player-green', '/assets/images/avatars/dino-green.png');
     this.load.image('player-orange', '/assets/images/avatars/dino-orange.png');
     this.load.image('player-purple', '/assets/images/avatars/dino-purple.png');
+
+    this.createGameAssets();
   }
 
   create(): void {
-    console.log('BootScene: Create called, starting GameScene...');
-
-    const colors = ['blue', 'green', 'orange', 'purple'];
-    const colorHex = [0x0000ff, 0x00ff00, 0xff8800, 0x8800ff];
-
-    colors.forEach((color, index) => {
-      const key = `player-${color}`;
-      if (!this.textures.exists(key)) {
-        console.warn(`Texture ${key} not found, creating placeholder`);
-        this.createPlayerPlaceholder(key, colorHex[index]);
-      }
-    });
-
     this.scene.start('GameScene');
   }
 
-  private createPlayerPlaceholder(key: string, color: number): void {
-    const graphics = this.add.graphics();
-    graphics.fillStyle(color, 1);
-    graphics.fillCircle(32, 32, 28);
-    graphics.fillStyle(0xffffff, 1);
-    graphics.fillCircle(24, 24, 8);
-    graphics.fillCircle(40, 24, 8);
-    graphics.fillStyle(0x000000, 1);
-    graphics.fillCircle(24, 24, 4);
-    graphics.fillCircle(40, 24, 4);
-    graphics.generateTexture(key, 64, 64);
-    graphics.destroy();
-  }
-
   private createGameAssets(): void {
-    console.log('Creating game assets...');
-
     // Indestructible block (darker)
     const indestructible = this.add.graphics();
     indestructible.fillStyle(0x333333, 1);
@@ -97,7 +64,5 @@ export class BootScene extends Phaser.Scene {
       powerup.generateTexture(`powerup-${type}`, 64, 64);
       powerup.destroy();
     });
-
-    console.log('Game assets created successfully');
   }
 }
