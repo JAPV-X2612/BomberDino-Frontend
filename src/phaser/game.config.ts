@@ -5,8 +5,8 @@ import { GameOverScene } from './scenes/GameOverScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 672, // 12 * 56
-  height: 672, // 12 * 56
+  width: 672,
+  height: 672,
   backgroundColor: '#3e9e57',
   physics: {
     default: 'arcade',
@@ -26,7 +26,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       height: 672,
     },
     max: {
-      width: 1344, // 2x para pantallas grandes
+      width: 1344,
       height: 1344,
     },
   },

@@ -14,9 +14,9 @@ export class GameScene extends Phaser.Scene {
   private sessionId?: string;
   private localPlayerId?: string;
 
-  // Control de input
   private lastMoveTime: number = 0;
-  private readonly MOVE_COOLDOWN = 200; // ms entre movimientos
+  private readonly MOVE_COOLDOWN = 200;
+  private gameActions: boolean;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -25,26 +25,7 @@ export class GameScene extends Phaser.Scene {
   setSessionContext(sessionId: string, playerId: string): void {
     this.sessionId = sessionId;
     this.localPlayerId = playerId;
-  }
-
-  setGameActions(actions: {
-    sendMove?: (direction: string) => void;
-    placeBomb?: () => void;
-    collectPowerUp?: (powerUpId: string) => void;
-  }): void {
-    // Placeholder
-  }
-
-  updateGameState(state: any): void {
-    // Placeholder
-  }
-
-  handleBombExploded(event: { bombId: string; x: number; y: number; range: number }): void {
-    // Placeholder
-  }
-
-  handlePlayerKilled(event: { playerId: string; killerId?: string }): void {
-    // Placeholder
+    console.log("Session Started: ", this.sessionId);
   }
 
   create(): void {
@@ -53,10 +34,7 @@ export class GameScene extends Phaser.Scene {
     const boardWidth = this.BOARD_SIZE * this.CELL_SIZE;
     const boardHeight = this.BOARD_SIZE * this.CELL_SIZE;
 
-    // Configurar el mundo de física
     this.physics.world.setBounds(0, 0, boardWidth, boardHeight);
-
-    // Configurar la cámara para que cubra todo el tablero
     this.cameras.main.setBounds(0, 0, boardWidth, boardHeight);
     this.cameras.main.setZoom(1);
 
@@ -73,10 +51,8 @@ export class GameScene extends Phaser.Scene {
     const boardWidth = this.BOARD_SIZE * this.CELL_SIZE;
     const boardHeight = this.BOARD_SIZE * this.CELL_SIZE;
 
-    // Fondo verde césped
     this.add.rectangle(boardWidth / 2, boardHeight / 2, boardWidth, boardHeight, 0x3e9e57);
 
-    // Líneas de cuadrícula
     for (let i = 0; i <= this.BOARD_SIZE; i++) {
       this.add
         .line(0, 0, i * this.CELL_SIZE, 0, i * this.CELL_SIZE, boardHeight, 0x2d7a44, 0.5)
@@ -90,7 +66,6 @@ export class GameScene extends Phaser.Scene {
     this.indestructibleBlocks = this.add.group();
     this.blocks = this.add.group();
 
-    // Crear bloques
     for (let row = 0; row < this.BOARD_SIZE; row++) {
       for (let col = 0; col < this.BOARD_SIZE; col++) {
         const isTopLeftCorner = row < 2 && col < 2;
@@ -100,7 +75,6 @@ export class GameScene extends Phaser.Scene {
         const isCorner =
           isTopLeftCorner || isTopRightCorner || isBottomLeftCorner || isBottomRightCorner;
 
-        // Bloques indestructibles
         if (row % 2 === 1 && col % 2 === 1 && !isCorner) {
           const block = this.add.rectangle(
             col * this.CELL_SIZE + this.CELL_SIZE / 2,
@@ -115,7 +89,7 @@ export class GameScene extends Phaser.Scene {
           this.physics.add.existing(block, true);
           this.indestructibleBlocks.add(block);
         }
-        // Bloques destructibles
+
         else if (!isCorner && Math.random() < 0.6) {
           const block = this.add.rectangle(
             col * this.CELL_SIZE + this.CELL_SIZE / 2,
@@ -161,7 +135,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setupInput(): void {
-    // Input basado en eventos individuales de teclas
     this.input.keyboard!.on('keydown-UP', () => {
       this.handleMoveInput(0, -1);
     });
@@ -189,7 +162,6 @@ export class GameScene extends Phaser.Scene {
   private handleMoveInput(dx: number, dy: number): void {
     const currentTime = this.time.now;
 
-    // Cooldown entre movimientos
     if (currentTime - this.lastMoveTime < this.MOVE_COOLDOWN) {
       return;
     }
@@ -203,17 +175,14 @@ export class GameScene extends Phaser.Scene {
     const newX = currentPos.x + dx;
     const newY = currentPos.y + dy;
 
-    // Verificar si hay bloque en la nueva posición
     if (this.hasBlockAt(newX, newY)) {
       return;
     }
 
-    // Verificar si hay bomba en la nueva posición
     if (this.hasBombAt(newX, newY)) {
       return;
     }
 
-    // Intentar mover
     if (localPlayer.moveToCell(newX, newY, this.BOARD_SIZE)) {
       this.lastMoveTime = currentTime;
     }
@@ -259,14 +228,9 @@ export class GameScene extends Phaser.Scene {
     this.powerups = this.add.group();
   }
 
-  update(): void {
-    // Ya no necesitamos update para input, se maneja con eventos
-  }
-
   private placeBomb(player: Player): void {
     const pos = player.getGridPosition();
 
-    // Verificar si ya hay una bomba aquí
     if (this.hasBombAt(pos.x, pos.y)) {
       return;
     }
@@ -296,7 +260,6 @@ export class GameScene extends Phaser.Scene {
     bomb.add([eggBody, eggShine, spot1, spot2, fuse, spark]);
     this.bombs.add(bomb);
 
-    // Animaciones
     this.tweens.add({
       targets: spark,
       alpha: { from: 1, to: 0.3 },
@@ -314,7 +277,6 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Explotar en 3 segundos
     this.time.delayedCall(3000, () => {
       this.explodeBomb(bomb, pos.x, pos.y);
     });
@@ -336,7 +298,6 @@ export class GameScene extends Phaser.Scene {
       const powerUpGridX = Math.round(powerUpSprite.x / this.cellSize);
       const powerUpGridY = Math.round(powerUpSprite.y / this.cellSize);
 
-      // Si el jugador está en la misma celda que el power-up
       if (playerGridX === powerUpGridX && playerGridY === powerUpGridY) {
         console.log('💎 Collecting power-up:', powerUpId);
         this.gameActions.collectPowerUp(powerUpId);
@@ -345,7 +306,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private explodeBomb(bomb: Phaser.GameObjects.Container, gridX: number, gridY: number): void {
-    // Animación de explosión
     const explosionCenter = this.add.circle(bomb.x, bomb.y, this.CELL_SIZE * 0.8, 0xff4500);
     const explosionOuter = this.add.circle(bomb.x, bomb.y, this.CELL_SIZE * 0.5, 0xffd700);
 
@@ -362,7 +322,6 @@ export class GameScene extends Phaser.Scene {
 
     bomb.destroy();
 
-    // Rango de explosión
     const range = 2;
     const directions = [
       { dx: 0, dy: 0 },
@@ -389,7 +348,6 @@ export class GameScene extends Phaser.Scene {
         const cellX = targetX * this.CELL_SIZE + this.CELL_SIZE / 2;
         const cellY = targetY * this.CELL_SIZE + this.CELL_SIZE / 2;
 
-        // Efecto visual
         if (i > 0) {
           const flame = this.add.circle(cellX, cellY, this.CELL_SIZE * 0.4, 0xff6600);
           this.tweens.add({
@@ -401,7 +359,6 @@ export class GameScene extends Phaser.Scene {
           });
         }
 
-        // Destruir bloques
         let blockDestroyed = false;
         this.blocks.getChildren().forEach((block) => {
           const b = block as Phaser.GameObjects.Rectangle;
@@ -417,13 +374,9 @@ export class GameScene extends Phaser.Scene {
           }
         });
 
-        // Si destruyó un bloque, detener expansión en esta dirección
         if (blockDestroyed) break;
-
-        // Bloque indestructible detiene la explosión
         if (this.hasBlockAt(targetX, targetY)) break;
 
-        // Dañar jugadores
         this.players.forEach((player) => {
           const playerPos = player.getGridPosition();
           if (playerPos.x === targetX && playerPos.y === targetY) {
@@ -485,7 +438,6 @@ export class GameScene extends Phaser.Scene {
       if (this.hasBlockAt(gridX, gridY)) continue;
       if (this.hasBombAt(gridX, gridY)) continue;
 
-      // Verificar jugadores
       let hasPlayer = false;
       this.players.forEach((player) => {
         const pos = player.getGridPosition();

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '@components/common/Button/Button';
-import { useGame } from '@/context/GameContext';
-import { DinoColor } from '@/types/game-types';
+import React, {useEffect, useState} from 'react';
+import {useNavigate, useSearchParams} from 'react-router-dom';
+import {Button} from '@components/common/Button/Button';
+import {useGame} from '@/context/GameContext';
+import {DinoColor} from '@/types/game-types';
 import './Lobby.css';
 
 interface LobbyPlayer {
@@ -22,12 +22,10 @@ export const Lobby: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onGameStart(() => {
+    return onGameStart(() => {
       console.log('Game started! Navigating to game...');
       navigate('/game');
     });
-
-    return unsubscribe;
   }, [onGameStart, navigate]);
 
   useEffect(() => {
@@ -68,11 +66,9 @@ export const Lobby: React.FC = () => {
     setIsStarting(true);
     try {
       await startGame();
-      // La navegación se hará cuando llegue el evento via WebSocket
     } catch (error) {
       console.error('Error starting game:', error);
       setIsStarting(false);
-      // Aquí podrías mostrar un mensaje de error al usuario
     }
   };
 

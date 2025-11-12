@@ -7,11 +7,7 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     console.log('BootScene: Starting preload...');
-
-    // Create game assets first (these don't depend on external files)
     this.createGameAssets();
-
-    // Try to load dinosaur images with error handling
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
       console.error('Error loading file:', file.key, file.src);
     });
@@ -25,7 +21,6 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     console.log('BootScene: Create called, starting GameScene...');
 
-    // Verificar si las texturas existen, si no, crear placeholders
     const colors = ['blue', 'green', 'orange', 'purple'];
     const colorHex = [0x0000ff, 0x00ff00, 0xff8800, 0x8800ff];
 
