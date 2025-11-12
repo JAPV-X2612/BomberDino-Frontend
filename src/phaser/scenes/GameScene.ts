@@ -44,8 +44,32 @@ export class GameScene extends Phaser.Scene {
     // Placeholder
   }
 
-  handlePlayerKilled(event: { playerId: string; killerId?: string }): void {
-    // Placeholder
+  public handlePlayerKilled(event: PlayerKilledEvent): void {
+    console.log('💀 Player killed:', event.victimId);
+
+    const player = this.players.get(event.victimId);
+    if (player) {
+      player.takeDamage();
+
+      // 🆕 EMITIR EVENTO PARA ACTUALIZAR HUD
+      window.dispatchEvent(
+        new CustomEvent('player-damage', {
+          detail: {
+            playerId: event.victimId,
+            lives: 0, // Cuando muere, lives = 0
+          },
+        }),
+      );
+    }
+
+    // Verificar si queda solo un jugador
+    const alivePlayers = Array.from(this.players.values()).filter((p) => p.isAlive());
+    if (alivePlayers.length === 1) {
+      console.log('🏆 Winner:', alivePlayers[0].getPlayerId());
+      this.time.delayedCall(2000, () => {
+        this.scene.start('GameOverScene', { winner: alivePlayers[0].getPlayerId() });
+      });
+    }
   }
 
   create(): void {
@@ -318,30 +342,6 @@ export class GameScene extends Phaser.Scene {
     // Explotar en 3 segundos
     this.time.delayedCall(3000, () => {
       this.explodeBomb(bomb, pos.x, pos.y);
-    });
-
-    this.checkPowerUpCollisions();
-  }
-
-  private checkPowerUpCollisions(): void {
-    if (!this.gameActions) return;
-
-    const localPlayer = this.players.get(this.localPlayerId);
-    if (!localPlayer || !localPlayer.isAlive()) return;
-
-    const playerSprite = localPlayer.getSprite();
-    const playerGridX = Math.round(playerSprite.x / this.cellSize);
-    const playerGridY = Math.round(playerSprite.y / this.cellSize);
-
-    this.powerUps.forEach((powerUpSprite, powerUpId) => {
-      const powerUpGridX = Math.round(powerUpSprite.x / this.cellSize);
-      const powerUpGridY = Math.round(powerUpSprite.y / this.cellSize);
-
-      // Si el jugador está en la misma celda que el power-up
-      if (playerGridX === powerUpGridX && playerGridY === powerUpGridY) {
-        console.log('💎 Collecting power-up:', powerUpId);
-        this.gameActions.collectPowerUp(powerUpId);
-      }
     });
   }
 
