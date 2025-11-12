@@ -1,0 +1,122 @@
+.hud-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(9, 56, 38, 0.85);
+  padding: 10px 20px;
+  z-index: 100;
+  pointer-events: none;
+  border-bottom: 4px solid rgba(255, 255, 255, 0.1);
+}
+
+.players-status {
+  display: flex;
+  gap: 15px;
+}
+
+.player-hud {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8));
+  padding: 8px 15px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 3px solid;
+  min-width: 150px;
+}
+
+.player-hud-blue {
+  border-color: var(--light-blue);
+  background: linear-gradient(135deg, rgba(56, 194, 241, 0.2), rgba(56, 194, 241, 0.1));
+}
+.player-hud-green {
+  border-color: var(--light-light-green);
+  background: linear-gradient(135deg, rgba(121, 185, 63, 0.2), rgba(121, 185, 63, 0.1));
+}
+.player-hud-orange {
+  border-color: var(--orange);
+  background: linear-gradient(135deg, rgba(229, 126, 41, 0.2), rgba(229, 126, 41, 0.1));
+}
+.player-hud-purple {
+  border-color: var(--purple);
+  background: linear-gradient(135deg, rgba(152, 63, 148, 0.2), rgba(152, 63, 148, 0.1));
+}
+
+.player-hud.dead {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.player-hud-icon {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.player-hud-blue .player-hud-icon {
+  background-color: var(--light-blue);
+}
+.player-hud-green .player-hud-icon {
+  background-color: var(--light-light-green);
+}
+.player-hud-orange .player-hud-icon {
+  background-color: var(--orange);
+}
+.player-hud-purple .player-hud-icon {
+  background-color: var(--purple);
+}
+
+.player-hud-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.player-hud-name {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.lives {
+  display: flex;
+  gap: 3px;
+}
+
+.heart {
+  font-size: 1.1rem;
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+@media (max-width: 768px) {
+  .hud-container {
+    padding: 10px 15px;
+  }
+
+  .player-hud {
+    min-width: 120px;
+    padding: 6px 10px;
+  }
+
+  .player-hud-icon {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.time-remaining {
+  position: absolute;
+  right: 20px;
+  color: var(--white);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
