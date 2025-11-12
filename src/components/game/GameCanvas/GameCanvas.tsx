@@ -51,10 +51,6 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
 
   useEffect(() => {
     if (!sceneRef.current || !gameState) return;
-
-    if (sceneRef.current.scene.isActive()) {
-      sceneRef.current.updateGameState(gameState);
-    }
   }, [gameState]);
 
   useEffect(() => {

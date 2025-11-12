@@ -143,9 +143,4 @@ export class Player {
   canMove(): boolean {
     return !this.isMoving;
   }
-
-  handleInput(cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
-    // Este método ya no se usa con movimiento por casillas
-    // Mantenemos para compatibilidad pero está vacío
-  }
 }

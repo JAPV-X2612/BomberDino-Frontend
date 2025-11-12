@@ -31,6 +31,7 @@ interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGame = (): GameContextValue => {
   const context = useContext(GameContext);
   if (!context) {

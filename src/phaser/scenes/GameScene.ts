@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
 import { Player } from '@phaser/entities/Player';
+import type {
+  Direction,
+  Point,
+  PlayerKilledEvent,
+  BombExplodedEvent,
+} from '@/types/websocket-types';
 
 export class GameScene extends Phaser.Scene {
   private readonly players: Map<string, Player> = new Map();
@@ -11,10 +17,6 @@ export class GameScene extends Phaser.Scene {
   private readonly CELL_SIZE = 56;
   private readonly BOARD_SIZE = 12;
 
-  // Propiedades para contexto multiplayer
-  private sessionId?: string;
-  private localPlayerId?: string;
-
   // Control de input
   private lastMoveTime: number = 0;
   private readonly MOVE_COOLDOWN = 200; // ms entre movimientos
@@ -23,25 +25,24 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
   }
 
-  setSessionContext(sessionId: string, playerId: string): void {
-    this.sessionId = sessionId;
-    this.localPlayerId = playerId;
+  setSessionContext(_sessionId: string, _playerId: string): void {
+    console.log(_sessionId);
+    console.log(_playerId);
   }
 
-  setGameActions(actions: {
-    sendMove?: (direction: string) => void;
-    placeBomb?: () => void;
+  setGameActions(_actions: {
+    sendMove?: (direction: Direction) => void;
+    placeBomb?: (position: Point) => void;
     collectPowerUp?: (powerUpId: string) => void;
   }): void {
-    // Placeholder
+    console.log(_actions);
+    // Placeholder - almacenar las acciones si es necesario
   }
 
-  updateGameState(state: any): void {
-    // Placeholder
-  }
-
-  handleBombExploded(event: { bombId: string; x: number; y: number; range: number }): void {
-    // Placeholder
+  handleBombExploded(event: BombExplodedEvent): void {
+    console.log('💥 Bomb exploded:', event.bombId);
+    // Implementar lógica de explosión de bomba
+    // Por ahora solo log para evitar error de parámetro no usado
   }
 
   public handlePlayerKilled(event: PlayerKilledEvent): void {
