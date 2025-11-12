@@ -81,7 +81,7 @@
   left: -250px;
   width: 700px;
   height: 700px;
-  background-image: url('/public/assets/images/avatars/dino-orange.png');
+  background-image: url('/assets/images/avatars/dino-orange.png');
   transform: rotate(45deg);
 }
 
@@ -90,7 +90,7 @@
   right: -250px;
   width: 600px;
   height: 600px;
-  background-image: url('/public/assets/images/avatars/dino-blue.png');
+  background-image: url('/assets/images/avatars/dino-blue.png');
   transform: rotate(-30deg);
 }
 
@@ -99,7 +99,7 @@
   left: -150px;
   width: 650px;
   height: 650px;
-  background-image: url('/public/assets/images/avatars/dino-purple.png');
+  background-image: url('/assets/images/avatars/dino-purple.png');
   transform: rotate(-15deg);
 }
 
@@ -108,7 +108,7 @@
   right: -250px;
   width: 650px;
   height: 650px;
-  background-image: url('/public/assets/images/avatars/dino-green.png');
+  background-image: url('/assets/images/avatars/dino-green.png');
   transform: rotate(20deg);
 }
 
