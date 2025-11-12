@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
 import { Player } from '@phaser/entities/Player';
+import type {
+  Direction,
+  Point,
+  PlayerKilledEvent,
+  BombExplodedEvent,
+} from '@/types/websocket-types';
 
 export class GameScene extends Phaser.Scene {
   private readonly players: Map<string, Player> = new Map();
@@ -7,128 +13,271 @@ export class GameScene extends Phaser.Scene {
   private blocks!: Phaser.GameObjects.Group;
   private indestructibleBlocks!: Phaser.GameObjects.Group;
   private powerups!: Phaser.GameObjects.Group;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private spaceKey!: Phaser.Input.Keyboard.Key;
 
   private readonly CELL_SIZE = 56;
   private readonly BOARD_SIZE = 12;
+
+  // Control de input
+  private lastMoveTime: number = 0;
+  private readonly MOVE_COOLDOWN = 200; // ms entre movimientos
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
+  setSessionContext(_sessionId: string, _playerId: string): void {
+    console.log(_sessionId);
+    console.log(_playerId);
+  }
+
+  setGameActions(_actions: {
+    sendMove?: (direction: Direction) => void;
+    placeBomb?: (position: Point) => void;
+    collectPowerUp?: (powerUpId: string) => void;
+  }): void {
+    console.log(_actions);
+    // Placeholder - almacenar las acciones si es necesario
+  }
+
+  handleBombExploded(event: BombExplodedEvent): void {
+    console.log('💥 Bomb exploded:', event.bombId);
+    // Implementar lógica de explosión de bomba
+    // Por ahora solo log para evitar error de parámetro no usado
+  }
+
+  public handlePlayerKilled(event: PlayerKilledEvent): void {
+    console.log('💀 Player killed:', event.victimId);
+
+    const player = this.players.get(event.victimId);
+    if (player) {
+      player.takeDamage();
+
+      // 🆕 EMITIR EVENTO PARA ACTUALIZAR HUD
+      window.dispatchEvent(
+        new CustomEvent('player-damage', {
+          detail: {
+            playerId: event.victimId,
+            lives: 0, // Cuando muere, lives = 0
+          },
+        }),
+      );
+    }
+
+    // Verificar si queda solo un jugador
+    const alivePlayers = Array.from(this.players.values()).filter((p) => p.isAlive());
+    if (alivePlayers.length === 1) {
+      console.log('🏆 Winner:', alivePlayers[0].getPlayerId());
+      this.time.delayedCall(2000, () => {
+        this.scene.start('GameOverScene', { winner: alivePlayers[0].getPlayerId() });
+      });
+    }
+  }
+
   create(): void {
+    console.log('GameScene: Create called');
+
     const boardWidth = this.BOARD_SIZE * this.CELL_SIZE;
     const boardHeight = this.BOARD_SIZE * this.CELL_SIZE;
-    this.cameras.main.setViewport(0, 0, boardWidth, boardHeight);
+
+    // Configurar el mundo de física
+    this.physics.world.setBounds(0, 0, boardWidth, boardHeight);
+
+    // Configurar la cámara para que cubra todo el tablero
+    this.cameras.main.setBounds(0, 0, boardWidth, boardHeight);
+    this.cameras.main.setZoom(1);
 
     this.createBoard();
     this.createPlayers();
     this.setupInput();
     this.setupGroups();
     this.startPowerupSpawner();
+
+    console.log('GameScene: Setup complete');
   }
 
   private createBoard(): void {
     const boardWidth = this.BOARD_SIZE * this.CELL_SIZE;
     const boardHeight = this.BOARD_SIZE * this.CELL_SIZE;
 
-    this.add.rectangle(
-        boardWidth / 2,
-        boardHeight / 2,
-        boardWidth,
-        boardHeight,
-        0x3e9e57,
-    );
+    // Fondo verde césped
+    this.add.rectangle(boardWidth / 2, boardHeight / 2, boardWidth, boardHeight, 0x3e9e57);
 
+    // Líneas de cuadrícula
     for (let i = 0; i <= this.BOARD_SIZE; i++) {
       this.add
-          .line(0, 0, i * this.CELL_SIZE, 0, i * this.CELL_SIZE, boardHeight, 0x000000, 0.3)
-          .setOrigin(0);
+        .line(0, 0, i * this.CELL_SIZE, 0, i * this.CELL_SIZE, boardHeight, 0x2d7a44, 0.5)
+        .setOrigin(0);
 
       this.add
-          .line(0, 0, 0, i * this.CELL_SIZE, boardWidth, i * this.CELL_SIZE, 0x000000, 0.3)
-          .setOrigin(0);
+        .line(0, 0, 0, i * this.CELL_SIZE, boardWidth, i * this.CELL_SIZE, 0x2d7a44, 0.5)
+        .setOrigin(0);
     }
 
     this.indestructibleBlocks = this.add.group();
     this.blocks = this.add.group();
 
+    // Crear bloques
     for (let row = 0; row < this.BOARD_SIZE; row++) {
       for (let col = 0; col < this.BOARD_SIZE; col++) {
         const isTopLeftCorner = row < 2 && col < 2;
         const isTopRightCorner = row < 2 && col >= this.BOARD_SIZE - 2;
         const isBottomLeftCorner = row >= this.BOARD_SIZE - 2 && col < 2;
-        const isBottomRightCorner =
-            row >= this.BOARD_SIZE - 2 && col >= this.BOARD_SIZE - 2;
+        const isBottomRightCorner = row >= this.BOARD_SIZE - 2 && col >= this.BOARD_SIZE - 2;
         const isCorner =
-            isTopLeftCorner ||
-            isTopRightCorner ||
-            isBottomLeftCorner ||
-            isBottomRightCorner;
+          isTopLeftCorner || isTopRightCorner || isBottomLeftCorner || isBottomRightCorner;
 
+        // Bloques indestructibles
         if (row % 2 === 1 && col % 2 === 1 && !isCorner) {
           const block = this.add.rectangle(
-              col * this.CELL_SIZE + this.CELL_SIZE / 2,
-              row * this.CELL_SIZE + this.CELL_SIZE / 2,
-              this.CELL_SIZE * 0.9,
-              this.CELL_SIZE * 0.9,
-              0x4a4a4a,
+            col * this.CELL_SIZE + this.CELL_SIZE / 2,
+            row * this.CELL_SIZE + this.CELL_SIZE / 2,
+            this.CELL_SIZE * 0.9,
+            this.CELL_SIZE * 0.9,
+            0x4a4a4a,
           );
           block.setData('blockType', 'indestructible');
+          block.setData('gridX', col);
+          block.setData('gridY', row);
           this.physics.add.existing(block, true);
           this.indestructibleBlocks.add(block);
         }
-
+        // Bloques destructibles
         else if (!isCorner && Math.random() < 0.6) {
           const block = this.add.rectangle(
-              col * this.CELL_SIZE + this.CELL_SIZE / 2,
-              row * this.CELL_SIZE + this.CELL_SIZE / 2,
-              this.CELL_SIZE * 0.85,
-              this.CELL_SIZE * 0.85,
-              0xa0826d,
+            col * this.CELL_SIZE + this.CELL_SIZE / 2,
+            row * this.CELL_SIZE + this.CELL_SIZE / 2,
+            this.CELL_SIZE * 0.85,
+            this.CELL_SIZE * 0.85,
+            0xa0826d,
           );
           block.setData('blockType', 'destructible');
+          block.setData('gridX', col);
+          block.setData('gridY', row);
           this.physics.add.existing(block, true);
           this.blocks.add(block);
         }
       }
     }
+
+    console.log('Board created');
   }
 
   private createPlayers(): void {
     const positions = [
-      { x: 0, y: 0, color: 'blue' }, // Top-left
-      { x: this.BOARD_SIZE - 1, y: 0, color: 'green' }, // Top-right
-      { x: 0, y: this.BOARD_SIZE - 1, color: 'orange' }, // Bottom-left
-      { x: this.BOARD_SIZE - 1, y: this.BOARD_SIZE - 1, color: 'purple' }, // Bottom-right
+      { x: 0, y: 0, color: 'blue' },
+      { x: this.BOARD_SIZE - 1, y: 0, color: 'green' },
+      { x: 0, y: this.BOARD_SIZE - 1, color: 'orange' },
+      { x: this.BOARD_SIZE - 1, y: this.BOARD_SIZE - 1, color: 'purple' },
     ];
 
     positions.forEach((pos, index) => {
       const player = new Player(
-          this,
-          pos.x * this.CELL_SIZE + this.CELL_SIZE / 2,
-          pos.y * this.CELL_SIZE + this.CELL_SIZE / 2,
-          `player-${pos.color}`,
-          `player-${index}`,
-          this.CELL_SIZE,
+        this,
+        pos.x * this.CELL_SIZE + this.CELL_SIZE / 2,
+        pos.y * this.CELL_SIZE + this.CELL_SIZE / 2,
+        `player-${pos.color}`,
+        `player-${index}`,
+        this.CELL_SIZE,
       );
 
-      const sprite = player.getSprite();
-      sprite.setScale(0.3);
-      sprite.setDisplaySize(this.CELL_SIZE * 0.7, this.CELL_SIZE * 0.7);
-
       this.players.set(`player-${index}`, player);
-
-      this.physics.add.collider(sprite, this.blocks);
-      this.physics.add.collider(sprite, this.indestructibleBlocks);
     });
+
+    console.log('Created', this.players.size, 'players');
   }
 
   private setupInput(): void {
-    this.cursors = this.input.keyboard!.createCursorKeys();
-    this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    console.log('Cursors and space key set up', this.cursors, this.spaceKey);
+    // Input basado en eventos individuales de teclas
+    this.input.keyboard!.on('keydown-UP', () => {
+      this.handleMoveInput(0, -1);
+    });
+
+    this.input.keyboard!.on('keydown-DOWN', () => {
+      this.handleMoveInput(0, 1);
+    });
+
+    this.input.keyboard!.on('keydown-LEFT', () => {
+      this.handleMoveInput(-1, 0);
+    });
+
+    this.input.keyboard!.on('keydown-RIGHT', () => {
+      this.handleMoveInput(1, 0);
+    });
+
+    this.input.keyboard!.on('keydown-SPACE', () => {
+      const localPlayer = this.players.get('player-0');
+      if (localPlayer) {
+        this.placeBomb(localPlayer);
+      }
+    });
+  }
+
+  private handleMoveInput(dx: number, dy: number): void {
+    const currentTime = this.time.now;
+
+    // Cooldown entre movimientos
+    if (currentTime - this.lastMoveTime < this.MOVE_COOLDOWN) {
+      return;
+    }
+
+    const localPlayer = this.players.get('player-0');
+    if (!localPlayer || !localPlayer.canMove()) {
+      return;
+    }
+
+    const currentPos = localPlayer.getGridPosition();
+    const newX = currentPos.x + dx;
+    const newY = currentPos.y + dy;
+
+    // Verificar si hay bloque en la nueva posición
+    if (this.hasBlockAt(newX, newY)) {
+      return;
+    }
+
+    // Verificar si hay bomba en la nueva posición
+    if (this.hasBombAt(newX, newY)) {
+      return;
+    }
+
+    // Intentar mover
+    if (localPlayer.moveToCell(newX, newY, this.BOARD_SIZE)) {
+      this.lastMoveTime = currentTime;
+    }
+  }
+
+  private hasBlockAt(gridX: number, gridY: number): boolean {
+    let hasBlock = false;
+
+    this.blocks.getChildren().forEach((block) => {
+      const b = block as Phaser.GameObjects.Rectangle;
+      if (b.getData('gridX') === gridX && b.getData('gridY') === gridY) {
+        hasBlock = true;
+      }
+    });
+
+    this.indestructibleBlocks.getChildren().forEach((block) => {
+      const b = block as Phaser.GameObjects.Rectangle;
+      if (b.getData('gridX') === gridX && b.getData('gridY') === gridY) {
+        hasBlock = true;
+      }
+    });
+
+    return hasBlock;
+  }
+
+  private hasBombAt(gridX: number, gridY: number): boolean {
+    let hasBomb = false;
+
+    this.bombs.getChildren().forEach((bomb) => {
+      const b = bomb as Phaser.GameObjects.Container;
+      const bombGridX = b.getData('gridX');
+      const bombGridY = b.getData('gridY');
+      if (bombGridX === gridX && bombGridY === gridY) {
+        hasBomb = true;
+      }
+    });
+
+    return hasBomb;
   }
 
   private setupGroups(): void {
@@ -137,56 +286,43 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(): void {
-    const localPlayer = this.players.get('player-0');
-    if (localPlayer) {
-      // localPlayer.handleInput(this.cursors);
-
-      if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-        this.placeBomb(localPlayer);
-      }
-    }
+    // Ya no necesitamos update para input, se maneja con eventos
   }
 
   private placeBomb(player: Player): void {
-    const sprite = player.getSprite();
-    const gridX = Math.floor(sprite.x / this.CELL_SIZE);
-    const gridY = Math.floor(sprite.y / this.CELL_SIZE);
+    const pos = player.getGridPosition();
 
-    const bombX = gridX * this.CELL_SIZE + this.CELL_SIZE / 2;
-    const bombY = gridY * this.CELL_SIZE + this.CELL_SIZE / 2;
+    // Verificar si ya hay una bomba aquí
+    if (this.hasBombAt(pos.x, pos.y)) {
+      return;
+    }
+
+    const bombX = pos.x * this.CELL_SIZE + this.CELL_SIZE / 2;
+    const bombY = pos.y * this.CELL_SIZE + this.CELL_SIZE / 2;
+
     const bomb = this.add.container(bombX, bombY);
+    bomb.setData('gridX', pos.x);
+    bomb.setData('gridY', pos.y);
 
-    const eggBody = this.add.ellipse(
-        0,
-        0,
-        this.CELL_SIZE * 0.6,
-        this.CELL_SIZE * 0.75,
-        0xffe4b5,
-    );
+    // Huevo base
+    const eggBody = this.add.ellipse(0, 0, this.CELL_SIZE * 0.6, this.CELL_SIZE * 0.75, 0xffe4b5);
     const eggShine = this.add.ellipse(
-        -5,
-        -8,
-        this.CELL_SIZE * 0.2,
-        this.CELL_SIZE * 0.25,
-        0xffffff,
-        0.6,
+      -5,
+      -8,
+      this.CELL_SIZE * 0.2,
+      this.CELL_SIZE * 0.25,
+      0xffffff,
+      0.6,
     );
-
     const spot1 = this.add.circle(4, -5, this.CELL_SIZE * 0.08, 0xd2691e, 0.5);
     const spot2 = this.add.circle(-6, 3, this.CELL_SIZE * 0.06, 0xd2691e, 0.5);
-
-    const fuse = this.add.rectangle(
-        0,
-        -this.CELL_SIZE * 0.45,
-        2,
-        this.CELL_SIZE * 0.2,
-        0x8b4513,
-    );
+    const fuse = this.add.rectangle(0, -this.CELL_SIZE * 0.45, 2, this.CELL_SIZE * 0.2, 0x8b4513);
     const spark = this.add.circle(0, -this.CELL_SIZE * 0.5, 3, 0xff4500);
 
     bomb.add([eggBody, eggShine, spot1, spot2, fuse, spark]);
     this.bombs.add(bomb);
 
+    // Animaciones
     this.tweens.add({
       targets: spark,
       alpha: { from: 1, to: 0.3 },
@@ -204,12 +340,14 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
     });
 
+    // Explotar en 3 segundos
     this.time.delayedCall(3000, () => {
-      this.explodeBomb(bomb, gridX, gridY);
+      this.explodeBomb(bomb, pos.x, pos.y);
     });
   }
 
   private explodeBomb(bomb: Phaser.GameObjects.Container, gridX: number, gridY: number): void {
+    // Animación de explosión
     const explosionCenter = this.add.circle(bomb.x, bomb.y, this.CELL_SIZE * 0.8, 0xff4500);
     const explosionOuter = this.add.circle(bomb.x, bomb.y, this.CELL_SIZE * 0.5, 0xffd700);
 
@@ -226,7 +364,8 @@ export class GameScene extends Phaser.Scene {
 
     bomb.destroy();
 
-    const range = 1;
+    // Rango de explosión
+    const range = 2;
     const directions = [
       { dx: 0, dy: 0 },
       { dx: 1, dy: 0 },
@@ -241,10 +380,10 @@ export class GameScene extends Phaser.Scene {
         const targetY = gridY + dy * i;
 
         if (
-            targetX < 0 ||
-            targetX >= this.BOARD_SIZE ||
-            targetY < 0 ||
-            targetY >= this.BOARD_SIZE
+          targetX < 0 ||
+          targetX >= this.BOARD_SIZE ||
+          targetY < 0 ||
+          targetY >= this.BOARD_SIZE
         ) {
           break;
         }
@@ -252,6 +391,7 @@ export class GameScene extends Phaser.Scene {
         const cellX = targetX * this.CELL_SIZE + this.CELL_SIZE / 2;
         const cellY = targetY * this.CELL_SIZE + this.CELL_SIZE / 2;
 
+        // Efecto visual
         if (i > 0) {
           const flame = this.add.circle(cellX, cellY, this.CELL_SIZE * 0.4, 0xff6600);
           this.tweens.add({
@@ -263,9 +403,11 @@ export class GameScene extends Phaser.Scene {
           });
         }
 
+        // Destruir bloques
+        let blockDestroyed = false;
         this.blocks.getChildren().forEach((block) => {
           const b = block as Phaser.GameObjects.Rectangle;
-          if (Math.abs(b.x - cellX) < 10 && Math.abs(b.y - cellY) < 10) {
+          if (b.getData('gridX') === targetX && b.getData('gridY') === targetY) {
             this.tweens.add({
               targets: block,
               alpha: 0,
@@ -273,15 +415,20 @@ export class GameScene extends Phaser.Scene {
               duration: 200,
               onComplete: () => block.destroy(),
             });
+            blockDestroyed = true;
           }
         });
 
+        // Si destruyó un bloque, detener expansión en esta dirección
+        if (blockDestroyed) break;
+
+        // Bloque indestructible detiene la explosión
+        if (this.hasBlockAt(targetX, targetY)) break;
+
+        // Dañar jugadores
         this.players.forEach((player) => {
-          const sprite = player.getSprite();
-          if (
-              Math.abs(sprite.x - cellX) < this.CELL_SIZE / 2 &&
-              Math.abs(sprite.y - cellY) < this.CELL_SIZE / 2
-          ) {
+          const playerPos = player.getGridPosition();
+          if (playerPos.x === targetX && playerPos.y === targetY) {
             player.takeDamage();
             if (!player.isAlive()) {
               this.checkGameOver();
@@ -324,62 +471,33 @@ export class GameScene extends Phaser.Scene {
     let gridX = 0;
     let gridY = 0;
     let attempts = 0;
-    const maxAttempts = 50;
 
-    while (!validPosition && attempts < maxAttempts) {
+    while (!validPosition && attempts < 50) {
       gridX = Phaser.Math.Between(0, this.BOARD_SIZE - 1);
       gridY = Phaser.Math.Between(0, this.BOARD_SIZE - 1);
       attempts++;
 
       const isCorner =
-          (gridX < 2 && gridY < 2) ||
-          (gridX >= this.BOARD_SIZE - 2 && gridY < 2) ||
-          (gridX < 2 && gridY >= this.BOARD_SIZE - 2) ||
-          (gridX >= this.BOARD_SIZE - 2 && gridY >= this.BOARD_SIZE - 2);
+        (gridX < 2 && gridY < 2) ||
+        (gridX >= this.BOARD_SIZE - 2 && gridY < 2) ||
+        (gridX < 2 && gridY >= this.BOARD_SIZE - 2) ||
+        (gridX >= this.BOARD_SIZE - 2 && gridY >= this.BOARD_SIZE - 2);
 
       if (isCorner) continue;
+      if (this.hasBlockAt(gridX, gridY)) continue;
+      if (this.hasBombAt(gridX, gridY)) continue;
 
-      const cellX = gridX * this.CELL_SIZE + this.CELL_SIZE / 2;
-      const cellY = gridY * this.CELL_SIZE + this.CELL_SIZE / 2;
-
-      let hasBlock = false;
-      this.blocks.getChildren().forEach((block) => {
-        const b = block as Phaser.GameObjects.Rectangle;
-        if (Math.abs(b.x - cellX) < 10 && Math.abs(b.y - cellY) < 10) {
-          hasBlock = true;
-        }
-      });
-      this.indestructibleBlocks.getChildren().forEach((block) => {
-        const b = block as Phaser.GameObjects.Rectangle;
-        if (Math.abs(b.x - cellX) < 10 && Math.abs(b.y - cellY) < 10) {
-          hasBlock = true;
-        }
-      });
-
-      if (hasBlock) continue;
-
-      let hasPowerup = false;
-      this.powerups.getChildren().forEach((powerup) => {
-        const p = powerup as Phaser.GameObjects.Arc;
-        if (Math.abs(p.x - cellX) < 10 && Math.abs(p.y - cellY) < 10) {
-          hasPowerup = true;
-        }
-      });
-
-      if (hasPowerup) continue;
-
+      // Verificar jugadores
       let hasPlayer = false;
       this.players.forEach((player) => {
-        const sprite = player.getSprite();
-        if (
-            Math.abs(sprite.x - cellX) < this.CELL_SIZE &&
-            Math.abs(sprite.y - cellY) < this.CELL_SIZE
-        ) {
+        const pos = player.getGridPosition();
+        if (pos.x === gridX && pos.y === gridY) {
           hasPlayer = true;
         }
       });
 
       if (hasPlayer) continue;
+
       validPosition = true;
     }
 
@@ -389,10 +507,10 @@ export class GameScene extends Phaser.Scene {
       const type = Phaser.Utils.Array.GetRandom(types);
 
       const powerup = this.add.circle(
-          cellX,
-          cellY,
-          this.CELL_SIZE * 0.3,
-          colors[type as keyof typeof colors],
+        cellX,
+        cellY,
+        this.CELL_SIZE * 0.3,
+        colors[type as keyof typeof colors],
       );
       powerup.setData('type', type);
       this.powerups.add(powerup);
