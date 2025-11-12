@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
 import { Player } from '@phaser/entities/Player';
+import type {
+  Direction,
+  Point,
+  PlayerKilledEvent,
+  BombExplodedEvent,
+} from '@/types/websocket-types';
 
 export class GameScene extends Phaser.Scene {
   private readonly players: Map<string, Player> = new Map();
@@ -11,10 +17,6 @@ export class GameScene extends Phaser.Scene {
   private readonly CELL_SIZE = 56;
   private readonly BOARD_SIZE = 12;
 
-  // Propiedades para contexto multiplayer
-  private sessionId?: string;
-  private localPlayerId?: string;
-
   // Control de input
   private lastMoveTime: number = 0;
   private readonly MOVE_COOLDOWN = 200; // ms entre movimientos
@@ -23,29 +25,52 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
   }
 
-  setSessionContext(sessionId: string, playerId: string): void {
-    this.sessionId = sessionId;
-    this.localPlayerId = playerId;
+  setSessionContext(_sessionId: string, _playerId: string): void {
+    console.log(_sessionId);
+    console.log(_playerId);
   }
 
-  setGameActions(actions: {
-    sendMove?: (direction: string) => void;
-    placeBomb?: () => void;
+  setGameActions(_actions: {
+    sendMove?: (direction: Direction) => void;
+    placeBomb?: (position: Point) => void;
     collectPowerUp?: (powerUpId: string) => void;
   }): void {
-    // Placeholder
+    console.log(_actions);
+    // Placeholder - almacenar las acciones si es necesario
   }
 
-  updateGameState(state: any): void {
-    // Placeholder
+  handleBombExploded(event: BombExplodedEvent): void {
+    console.log('💥 Bomb exploded:', event.bombId);
+    // Implementar lógica de explosión de bomba
+    // Por ahora solo log para evitar error de parámetro no usado
   }
 
-  handleBombExploded(event: { bombId: string; x: number; y: number; range: number }): void {
-    // Placeholder
-  }
+  public handlePlayerKilled(event: PlayerKilledEvent): void {
+    console.log('💀 Player killed:', event.victimId);
 
-  handlePlayerKilled(event: { playerId: string; killerId?: string }): void {
-    // Placeholder
+    const player = this.players.get(event.victimId);
+    if (player) {
+      player.takeDamage();
+
+      // 🆕 EMITIR EVENTO PARA ACTUALIZAR HUD
+      window.dispatchEvent(
+        new CustomEvent('player-damage', {
+          detail: {
+            playerId: event.victimId,
+            lives: 0, // Cuando muere, lives = 0
+          },
+        }),
+      );
+    }
+
+    // Verificar si queda solo un jugador
+    const alivePlayers = Array.from(this.players.values()).filter((p) => p.isAlive());
+    if (alivePlayers.length === 1) {
+      console.log('🏆 Winner:', alivePlayers[0].getPlayerId());
+      this.time.delayedCall(2000, () => {
+        this.scene.start('GameOverScene', { winner: alivePlayers[0].getPlayerId() });
+      });
+    }
   }
 
   create(): void {
@@ -318,30 +343,6 @@ export class GameScene extends Phaser.Scene {
     // Explotar en 3 segundos
     this.time.delayedCall(3000, () => {
       this.explodeBomb(bomb, pos.x, pos.y);
-    });
-
-    this.checkPowerUpCollisions();
-  }
-
-  private checkPowerUpCollisions(): void {
-    if (!this.gameActions) return;
-
-    const localPlayer = this.players.get(this.localPlayerId);
-    if (!localPlayer || !localPlayer.isAlive()) return;
-
-    const playerSprite = localPlayer.getSprite();
-    const playerGridX = Math.round(playerSprite.x / this.cellSize);
-    const playerGridY = Math.round(playerSprite.y / this.cellSize);
-
-    this.powerUps.forEach((powerUpSprite, powerUpId) => {
-      const powerUpGridX = Math.round(powerUpSprite.x / this.cellSize);
-      const powerUpGridY = Math.round(powerUpSprite.y / this.cellSize);
-
-      // Si el jugador está en la misma celda que el power-up
-      if (playerGridX === powerUpGridX && playerGridY === powerUpGridY) {
-        console.log('💎 Collecting power-up:', powerUpId);
-        this.gameActions.collectPowerUp(powerUpId);
-      }
     });
   }
 
