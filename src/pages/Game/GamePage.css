@@ -9,13 +9,11 @@
   margin: 0;
 }
 
-/* HUD en la parte superior - altura fija pequeña */
 .game-page > *:first-child {
   flex-shrink: 0;
-  max-height: 80px; /* Limitar altura del HUD */
+  max-height: 80px;
 }
 
-/* Canvas ocupa el resto del espacio */
 .game-page > *:last-child {
   flex: 1;
   min-height: 0;

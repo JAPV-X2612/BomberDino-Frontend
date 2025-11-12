@@ -7,11 +7,10 @@
   background: linear-gradient(135deg, #2d7a44 0%, #1a5c32 100%);
   position: relative;
   overflow: hidden;
-  padding: 20px; /* Espacio alrededor del tablero */
+  padding: 20px;
   box-sizing: border-box;
 }
 
-/* Asegurar que el canvas de Phaser esté centrado y contenido */
 .game-canvas-container canvas {
   display: block !important;
   margin: auto !important;
