@@ -10,7 +10,6 @@ export class Player {
   private readonly spawnY: number;
   private isInvulnerable: boolean = false;
 
-  // Para movimiento por casillas
   private isMoving: boolean = false;
   private gridX: number;
   private gridY: number;
@@ -29,7 +28,6 @@ export class Player {
     this.spawnX = x;
     this.spawnY = y;
 
-    // Calcular posición inicial en la cuadrícula
     this.gridX = Math.floor(x / cellSize);
     this.gridY = Math.floor(y / cellSize);
 
@@ -37,7 +35,6 @@ export class Player {
     this.sprite.setDisplaySize(this.cellSize * 0.7, this.cellSize * 0.7);
     this.sprite.setCollideWorldBounds(true);
 
-    // Desactivar velocidad - ahora usamos tweens para mover
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     if (body) {
       body.setVelocity(0, 0);
@@ -63,9 +60,9 @@ export class Player {
     }
   }
 
-  setLives(lives: number): void {
-    this.lives = lives;
-  }
+  // setLives(lives: number): void {
+  //   this.lives = lives;
+  // }
 
   private respawn(): void {
     this.isInvulnerable = true;
@@ -98,32 +95,26 @@ export class Player {
     return this.playerId;
   }
 
-  getLives(): number {
-    return this.lives;
-  }
+  // getLives(): number {
+  //   return this.lives;
+  // }
 
   getGridPosition(): { x: number; y: number } {
     return { x: this.gridX, y: this.gridY };
   }
 
-  // Nuevo método para mover por casillas
   moveToCell(newGridX: number, newGridY: number, boardSize: number): boolean {
-    // Si ya está moviéndose, no permitir otro movimiento
     if (this.isMoving) return false;
 
-    // Verificar límites del tablero
     if (newGridX < 0 || newGridX >= boardSize || newGridY < 0 || newGridY >= boardSize) {
       return false;
     }
 
-    // Calcular posición en píxeles
     const targetX = newGridX * this.cellSize + this.cellSize / 2;
     const targetY = newGridY * this.cellSize + this.cellSize / 2;
 
-    // Marcar como moviéndose
     this.isMoving = true;
 
-    // Animar movimiento
     this.scene.tweens.add({
       targets: this.sprite,
       x: targetX,

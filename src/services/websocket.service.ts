@@ -8,7 +8,7 @@ import type {
   BombExplodedEvent,
   PlayerKilledEvent,
   PowerUpCollectedEvent,
-  StartGameRequest,
+  // StartGameRequest,
   GameStartNotification,
 } from '@/types/websocket-types';
 
@@ -120,7 +120,7 @@ class WebSocketService {
     }
 
     const subscription = this.client.subscribe(destination, (message: IMessage) => {
-      console.log('📩 Mensaje recibido en', destination, ':', message.body); // 👈 Añade esto
+      console.log('📩 Mensaje recibido en', destination, ':', message.body);
       try {
         const data = JSON.parse(message.body) as T;
         handler(data);
@@ -133,18 +133,18 @@ class WebSocketService {
     console.log(`Subscribed to ${destination}`);
   }
 
-  unsubscribe(destination: string): void {
-    const subscription = this.subscriptions.get(destination);
-    if (subscription) {
-      subscription.unsubscribe();
-      this.subscriptions.delete(destination);
-      console.log(`Unsubscribed from ${destination}`);
-    }
-  }
-
-  sendStartGame(request: StartGameRequest) {
-    this.send(`/app/room/${request.sessionId}/start`, request);
-  }
+  // unsubscribe(destination: string): void {
+  //   const subscription = this.subscriptions.get(destination);
+  //   if (subscription) {
+  //     subscription.unsubscribe();
+  //     this.subscriptions.delete(destination);
+  //     console.log(`Unsubscribed from ${destination}`);
+  //   }
+  // }
+  //
+  // sendStartGame(request: StartGameRequest) {
+  //   this.send(`/app/room/${request.sessionId}/start`, request);
+  // }
 
   sendPlayerMove(request: PlayerMoveRequest): void {
     this.send('/app/game/move', request);
@@ -170,9 +170,9 @@ class WebSocketService {
     });
   }
 
-  isConnectedStatus(): boolean {
-    return this.isConnected;
-  }
+  // isConnectedStatus(): boolean {
+  //   return this.isConnected;
+  // }
 }
 
 export const webSocketService = new WebSocketService();
