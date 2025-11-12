@@ -91,6 +91,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setGameState(notification.initialState);
         gameStartCallbacks.forEach((cb) => cb());
       });
+
+      webSocketService.subscribeToGameStart(sid, (notification) => {
+        console.log('🎮 Game starting!', notification); // Agregar
+        setGameState(notification.initialState);
+        gameStartCallbacks.forEach((cb) => cb());
+      });
     },
     [bombExplodedCallbacks, gameStartCallbacks, playerKilledCallbacks, powerUpCollectedCallbacks],
   );

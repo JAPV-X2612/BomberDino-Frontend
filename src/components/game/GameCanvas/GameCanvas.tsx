@@ -37,6 +37,14 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
           placeBomb,
           collectPowerUp,
         });
+
+        // Escuchar cuando la escena esté completamente lista
+        scene.events.once('scene-ready', () => {
+          console.log('🎮 Scene ready event received, applying state');
+          if (gameState) {
+            scene.updateGameState(gameState);
+          }
+        });
       }
     });
 
@@ -47,10 +55,15 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
         sceneRef.current = null;
       }
     };
-  }, [sessionId, playerId, sendMove, placeBomb, collectPowerUp]);
+  }, [sessionId, playerId, sendMove, placeBomb, collectPowerUp, gameState]);
 
   useEffect(() => {
     if (!sceneRef.current || !gameState) return;
+
+    if (sceneRef.current.scene.isActive()) {
+      console.log('🔄 Updating game state');
+      sceneRef.current.updateGameState(gameState);
+    }
   }, [gameState]);
 
   useEffect(() => {
