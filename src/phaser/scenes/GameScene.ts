@@ -22,8 +22,7 @@ export class GameScene extends Phaser.Scene {
   private readonly CELL_SIZE = 56;
   private BOARD_SIZE = 13;
   private sceneReady = false;
-  private pendingState: GameStateUpdate | null = null; // Estado pendiente
-
+  private pendingState: GameStateUpdate | null = null;
   private gameActions?: {
     sendMove?: (direction: Direction) => void;
     placeBomb?: (position: Point) => void;
@@ -54,6 +53,8 @@ export class GameScene extends Phaser.Scene {
 
   updateGameState(state: GameStateUpdate): void {
     console.log('📦 Updating game state:', state);
+    console.log('📦 updateGameState CALLED at', new Date().toISOString());
+    console.log('📦 State:', state);
 
     // Si la escena no está lista, guardar el estado para después
     if (!this.sceneReady) {
@@ -63,26 +64,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (!this.boardInitialized && state.tiles) {
-      this.BOARD_SIZE = state.tiles.length;
       this.initializeBoardFromBackend(state.tiles);
       this.boardInitialized = true;
     }
 
-    if (state.players) {
-      this.updatePlayers(state.players);
-    }
-
-    if (state.bombs) {
-      this.updateBombs(state.bombs);
-    }
-
-    if (state.powerUps) {
-      this.updatePowerUps(state.powerUps);
-    }
-
-    if (state.tiles) {
-      this.updateTiles(state.tiles);
-    }
+    if (state.players) this.updatePlayers(state.players);
+    if (state.bombs) this.updateBombs(state.bombs);
+    if (state.powerUps) this.updatePowerUps(state.powerUps);
   }
 
   handleBombExploded(event: BombExplodedEvent): void {
@@ -125,7 +113,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, boardWidth, boardHeight);
     this.cameras.main.setZoom(1);
 
-    this.add.rectangle(boardWidth / 2, boardHeight / 2, boardWidth, boardHeight, 0x3e9e57);
+    this.add
+      .rectangle(boardWidth / 2, boardHeight / 2, boardWidth, boardHeight, 0x3e9e57)
+      .setDepth(-1);
 
     this.setupGroups();
     this.setupInput();
@@ -158,11 +148,21 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.indestructibleBlocks.clear(true, true);
-    this.blocks.clear(true, true);
+    if (!this.boardInitialized) {
+      this.indestructibleBlocks.clear(true, true);
+      this.blocks.clear(true, true);
+    } else {
+      // Si ya está inicializado, no redibujar
+      return;
+    }
+
+    this.BOARD_SIZE = width;
 
     const boardWidth = width * this.CELL_SIZE;
     const boardHeight = height * this.CELL_SIZE;
+
+    this.physics.world.setBounds(0, 0, boardWidth, boardHeight);
+    this.cameras.main.setBounds(0, 0, boardWidth, boardHeight);
 
     for (let i = 0; i <= width; i++) {
       this.add
@@ -184,6 +184,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     console.log('✅ Board initialized from backend');
+    this.boardInitialized = true;
   }
 
   private createTileVisual(tile: TileDTO): void {
@@ -214,6 +215,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePlayers(playersData: PlayerDTO[]): void {
+    console.log('🔄 Updating players:', playersData);
+
+    this.blocks.setVisible(false);
+    this.indestructibleBlocks.setVisible(false);
+
     playersData.forEach((playerData) => {
       let player = this.players.get(playerData.id);
 
@@ -250,6 +256,9 @@ export class GameScene extends Phaser.Scene {
         }
       }
     });
+
+    this.blocks.setVisible(true);
+    this.indestructibleBlocks.setVisible(true);
   }
 
   private updateBombs(bombsData: BombDTO[]): void {
@@ -411,6 +420,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleMoveInput(dx: number, dy: number): void {
+    console.log('🎹 Key pressed:', dx, dy);
     const currentTime = this.time.now;
 
     if (currentTime - this.lastMoveTime < this.MOVE_COOLDOWN) {
@@ -425,9 +435,17 @@ export class GameScene extends Phaser.Scene {
     };
 
     const direction = directionMap[`${dx},${dy}`];
+
+    console.log('📍 Direction:', direction);
+    console.log('🎮 gameActions:', this.gameActions);
+
     if (direction && this.gameActions?.sendMove) {
+      console.log('✅ Calling sendMove');
+
       this.gameActions.sendMove(direction);
       this.lastMoveTime = currentTime;
+    } else {
+      console.log('❌ Cannot send move');
     }
   }
 

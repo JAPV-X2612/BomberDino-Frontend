@@ -163,8 +163,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendMove = useCallback(
     (direction: PlayerMoveRequest['direction']) => {
+      console.log('🎯 sendMove called:', { sessionId, playerId, direction });
       if (!sessionId || !playerId) return;
 
+      console.log('📤 Calling webSocketService.sendPlayerMove');
       webSocketService.sendPlayerMove({
         sessionId,
         playerId,
