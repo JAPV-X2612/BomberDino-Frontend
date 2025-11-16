@@ -38,7 +38,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   setSessionContext(_sessionId: string, _playerId: string): void {
-    // Guardar para uso futuro si necesario
     console.log(_sessionId);
     console.log(_playerId);
   }
@@ -56,7 +55,6 @@ export class GameScene extends Phaser.Scene {
     console.log('📦 updateGameState CALLED at', new Date().toISOString());
     console.log('📦 State:', state);
 
-    // Si la escena no está lista, guardar el estado para después
     if (!this.sceneReady) {
       console.warn('⚠️ Scene not ready yet, saving state for later');
       this.pendingState = state;
@@ -123,7 +121,6 @@ export class GameScene extends Phaser.Scene {
     this.sceneReady = true;
     console.log('GameScene: Scene ready, applying pending state if any...');
 
-    // Aplicar estado pendiente si existe
     if (this.pendingState) {
       console.log('✅ Applying pending state');
       const state = this.pendingState;
@@ -131,7 +128,6 @@ export class GameScene extends Phaser.Scene {
       this.updateGameState(state);
     } else {
       console.warn('⚠️ No pending state found');
-      // Emitir evento para que GameCanvas aplique el estado
       this.events.emit('scene-ready');
     }
   }
@@ -142,7 +138,6 @@ export class GameScene extends Phaser.Scene {
     const height = tiles.length;
     const width = tiles[0]?.length || 0;
 
-    // Verificar que los grupos existan
     if (!this.indestructibleBlocks || !this.blocks) {
       console.warn('⚠️ Groups not initialized yet, skipping board initialization');
       return;
@@ -152,7 +147,6 @@ export class GameScene extends Phaser.Scene {
       this.indestructibleBlocks.clear(true, true);
       this.blocks.clear(true, true);
     } else {
-      // Si ya está inicializado, no redibujar
       return;
     }
 
