@@ -377,26 +377,26 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private updateTiles(tiles: TileDTO[][]): void {
-    if (!this.blocks) return;
-
-    this.blocks.getChildren().forEach((block) => {
-      const rect = block as Phaser.GameObjects.Rectangle;
-      const gridX = rect.getData('gridX') as number;
-      const gridY = rect.getData('gridY') as number;
-
-      const tile = tiles[gridY]?.[gridX];
-      if (!tile || tile.type !== 'DESTRUCTIBLE_WALL') {
-        this.tweens.add({
-          targets: block,
-          alpha: 0,
-          scale: 0,
-          duration: 200,
-          onComplete: () => block.destroy(),
-        });
-      }
-    });
-  }
+  // private updateTiles(tiles: TileDTO[][]): void {
+  //   if (!this.blocks) return;
+  //
+  //   this.blocks.getChildren().forEach((block) => {
+  //     const rect = block as Phaser.GameObjects.Rectangle;
+  //     const gridX = rect.getData('gridX') as number;
+  //     const gridY = rect.getData('gridY') as number;
+  //
+  //     const tile = tiles[gridY]?.[gridX];
+  //     if (!tile || tile.type !== 'DESTRUCTIBLE_WALL') {
+  //       this.tweens.add({
+  //         targets: block,
+  //         alpha: 0,
+  //         scale: 0,
+  //         duration: 200,
+  //         onComplete: () => block.destroy(),
+  //       });
+  //     }
+  //   });
+  // }
 
   private setupGroups(): void {
     this.bombs = this.add.group();

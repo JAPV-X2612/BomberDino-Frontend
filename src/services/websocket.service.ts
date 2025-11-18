@@ -188,17 +188,17 @@ class WebSocketService {
     });
   }
 
-  private send<T>(destination: string, body: T): void {
-    if (!this.client || !this.isConnected) {
-      console.error('Cannot send: WebSocket not connected');
-      return;
-    }
-
-    this.client.publish({
-      destination,
-      body: JSON.stringify(body),
-    });
-  }
+  // private send<T>(destination: string, body: T): void {
+  //   if (!this.client || !this.isConnected) {
+  //     console.error('Cannot send: WebSocket not connected');
+  //     return;
+  //   }
+  //
+  //   this.client.publish({
+  //     destination,
+  //     body: JSON.stringify(body),
+  //   });
+  // }
 
   // isConnectedStatus(): boolean {
   //   return this.isConnected;
