@@ -1,11 +1,16 @@
 import Phaser from 'phaser';
 import { Player } from '@phaser/entities/Player';
 import type {
-  Direction,
   Point,
   PlayerKilledEvent,
   BombExplodedEvent,
+  GameStateUpdate,
+  TileDTO,
+  PlayerDTO,
+  BombDTO,
+  PowerUpDTO,
 } from '@/types/websocket-types';
+import { Direction } from '@/types/websocket-types';
 
 export class GameScene extends Phaser.Scene {
   private readonly players: Map<string, Player> = new Map();
@@ -15,11 +20,18 @@ export class GameScene extends Phaser.Scene {
   private powerups!: Phaser.GameObjects.Group;
 
   private readonly CELL_SIZE = 56;
-  private readonly BOARD_SIZE = 12;
+  private BOARD_SIZE = 13;
+  private sceneReady = false;
+  private pendingState: GameStateUpdate | null = null;
+  private gameActions?: {
+    sendMove?: (direction: Direction) => void;
+    placeBomb?: (position: Point) => void;
+    collectPowerUp?: (powerUpId: string) => void;
+  };
 
-  // Control de input
   private lastMoveTime: number = 0;
-  private readonly MOVE_COOLDOWN = 200; // ms entre movimientos
+  private readonly MOVE_COOLDOWN = 200;
+  private boardInitialized = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -30,19 +42,37 @@ export class GameScene extends Phaser.Scene {
     console.log(_playerId);
   }
 
-  setGameActions(_actions: {
+  setGameActions(actions: {
     sendMove?: (direction: Direction) => void;
     placeBomb?: (position: Point) => void;
     collectPowerUp?: (powerUpId: string) => void;
   }): void {
-    console.log(_actions);
-    // Placeholder - almacenar las acciones si es necesario
+    this.gameActions = actions;
+  }
+
+  updateGameState(state: GameStateUpdate): void {
+    console.log('📦 Updating game state:', state);
+    console.log('📦 updateGameState CALLED at', new Date().toISOString());
+    console.log('📦 State:', state);
+
+    if (!this.sceneReady) {
+      console.warn('⚠️ Scene not ready yet, saving state for later');
+      this.pendingState = state;
+      return;
+    }
+
+    if (!this.boardInitialized && state.tiles) {
+      this.initializeBoardFromBackend(state.tiles);
+      this.boardInitialized = true;
+    }
+
+    if (state.players) this.updatePlayers(state.players);
+    if (state.bombs) this.updateBombs(state.bombs);
+    if (state.powerUps) this.updatePowerUps(state.powerUps);
   }
 
   handleBombExploded(event: BombExplodedEvent): void {
     console.log('💥 Bomb exploded:', event.bombId);
-    // Implementar lógica de explosión de bomba
-    // Por ahora solo log para evitar error de parámetro no usado
   }
 
   public handlePlayerKilled(event: PlayerKilledEvent): void {
@@ -52,18 +82,16 @@ export class GameScene extends Phaser.Scene {
     if (player) {
       player.takeDamage();
 
-      // 🆕 EMITIR EVENTO PARA ACTUALIZAR HUD
       window.dispatchEvent(
         new CustomEvent('player-damage', {
           detail: {
             playerId: event.victimId,
-            lives: 0, // Cuando muere, lives = 0
+            lives: 0,
           },
         }),
       );
     }
 
-    // Verificar si queda solo un jugador
     const alivePlayers = Array.from(this.players.values()).filter((p) => p.isAlive());
     if (alivePlayers.length === 1) {
       console.log('🏆 Winner:', alivePlayers[0].getPlayerId());
@@ -79,232 +107,188 @@ export class GameScene extends Phaser.Scene {
     const boardWidth = this.BOARD_SIZE * this.CELL_SIZE;
     const boardHeight = this.BOARD_SIZE * this.CELL_SIZE;
 
-    // Configurar el mundo de física
     this.physics.world.setBounds(0, 0, boardWidth, boardHeight);
-
-    // Configurar la cámara para que cubra todo el tablero
     this.cameras.main.setBounds(0, 0, boardWidth, boardHeight);
     this.cameras.main.setZoom(1);
 
-    this.createBoard();
-    this.createPlayers();
-    this.setupInput();
-    this.setupGroups();
-    this.startPowerupSpawner();
+    this.add
+      .rectangle(boardWidth / 2, boardHeight / 2, boardWidth, boardHeight, 0x3e9e57)
+      .setDepth(-1);
 
-    console.log('GameScene: Setup complete');
+    this.setupGroups();
+    this.setupInput();
+
+    this.sceneReady = true;
+    console.log('GameScene: Scene ready, applying pending state if any...');
+
+    if (this.pendingState) {
+      console.log('✅ Applying pending state');
+      const state = this.pendingState;
+      this.pendingState = null;
+      this.updateGameState(state);
+    } else {
+      console.warn('⚠️ No pending state found');
+      this.events.emit('scene-ready');
+    }
   }
 
-  private createBoard(): void {
-    const boardWidth = this.BOARD_SIZE * this.CELL_SIZE;
-    const boardHeight = this.BOARD_SIZE * this.CELL_SIZE;
+  private initializeBoardFromBackend(tiles: TileDTO[][]): void {
+    console.log('🎮 Initializing board from backend, size:', tiles.length);
 
-    // Fondo verde césped
-    this.add.rectangle(boardWidth / 2, boardHeight / 2, boardWidth, boardHeight, 0x3e9e57);
+    const height = tiles.length;
+    const width = tiles[0]?.length || 0;
 
-    // Líneas de cuadrícula
-    for (let i = 0; i <= this.BOARD_SIZE; i++) {
+    if (!this.indestructibleBlocks || !this.blocks) {
+      console.warn('⚠️ Groups not initialized yet, skipping board initialization');
+      return;
+    }
+
+    if (!this.boardInitialized) {
+      this.indestructibleBlocks.clear(true, true);
+      this.blocks.clear(true, true);
+    } else {
+      return;
+    }
+
+    this.BOARD_SIZE = width;
+
+    const boardWidth = width * this.CELL_SIZE;
+    const boardHeight = height * this.CELL_SIZE;
+
+    this.physics.world.setBounds(0, 0, boardWidth, boardHeight);
+    this.cameras.main.setBounds(0, 0, boardWidth, boardHeight);
+
+    for (let i = 0; i <= width; i++) {
       this.add
         .line(0, 0, i * this.CELL_SIZE, 0, i * this.CELL_SIZE, boardHeight, 0x2d7a44, 0.5)
         .setOrigin(0);
+    }
 
+    for (let i = 0; i <= height; i++) {
       this.add
         .line(0, 0, 0, i * this.CELL_SIZE, boardWidth, i * this.CELL_SIZE, 0x2d7a44, 0.5)
         .setOrigin(0);
     }
 
-    this.indestructibleBlocks = this.add.group();
-    this.blocks = this.add.group();
-
-    // Crear bloques
-    for (let row = 0; row < this.BOARD_SIZE; row++) {
-      for (let col = 0; col < this.BOARD_SIZE; col++) {
-        const isTopLeftCorner = row < 2 && col < 2;
-        const isTopRightCorner = row < 2 && col >= this.BOARD_SIZE - 2;
-        const isBottomLeftCorner = row >= this.BOARD_SIZE - 2 && col < 2;
-        const isBottomRightCorner = row >= this.BOARD_SIZE - 2 && col >= this.BOARD_SIZE - 2;
-        const isCorner =
-          isTopLeftCorner || isTopRightCorner || isBottomLeftCorner || isBottomRightCorner;
-
-        // Bloques indestructibles
-        if (row % 2 === 1 && col % 2 === 1 && !isCorner) {
-          const block = this.add.rectangle(
-            col * this.CELL_SIZE + this.CELL_SIZE / 2,
-            row * this.CELL_SIZE + this.CELL_SIZE / 2,
-            this.CELL_SIZE * 0.9,
-            this.CELL_SIZE * 0.9,
-            0x4a4a4a,
-          );
-          block.setData('blockType', 'indestructible');
-          block.setData('gridX', col);
-          block.setData('gridY', row);
-          this.physics.add.existing(block, true);
-          this.indestructibleBlocks.add(block);
-        }
-        // Bloques destructibles
-        else if (!isCorner && Math.random() < 0.6) {
-          const block = this.add.rectangle(
-            col * this.CELL_SIZE + this.CELL_SIZE / 2,
-            row * this.CELL_SIZE + this.CELL_SIZE / 2,
-            this.CELL_SIZE * 0.85,
-            this.CELL_SIZE * 0.85,
-            0xa0826d,
-          );
-          block.setData('blockType', 'destructible');
-          block.setData('gridX', col);
-          block.setData('gridY', row);
-          this.physics.add.existing(block, true);
-          this.blocks.add(block);
-        }
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        const tile = tiles[row][col];
+        this.createTileVisual(tile);
       }
     }
 
-    console.log('Board created');
+    console.log('✅ Board initialized from backend');
+    this.boardInitialized = true;
   }
 
-  private createPlayers(): void {
-    const positions = [
-      { x: 0, y: 0, color: 'blue' },
-      { x: this.BOARD_SIZE - 1, y: 0, color: 'green' },
-      { x: 0, y: this.BOARD_SIZE - 1, color: 'orange' },
-      { x: this.BOARD_SIZE - 1, y: this.BOARD_SIZE - 1, color: 'purple' },
-    ];
+  private createTileVisual(tile: TileDTO): void {
+    const x = tile.x * this.CELL_SIZE + this.CELL_SIZE / 2;
+    const y = tile.y * this.CELL_SIZE + this.CELL_SIZE / 2;
 
-    positions.forEach((pos, index) => {
-      const player = new Player(
-        this,
-        pos.x * this.CELL_SIZE + this.CELL_SIZE / 2,
-        pos.y * this.CELL_SIZE + this.CELL_SIZE / 2,
-        `player-${pos.color}`,
-        `player-${index}`,
-        this.CELL_SIZE,
+    if (tile.type === 'SOLID_WALL') {
+      const block = this.add.rectangle(x, y, this.CELL_SIZE * 0.9, this.CELL_SIZE * 0.9, 0x4a4a4a);
+      block.setData('blockType', 'indestructible');
+      block.setData('gridX', tile.x);
+      block.setData('gridY', tile.y);
+      this.physics.add.existing(block, true);
+      this.indestructibleBlocks.add(block);
+    } else if (tile.type === 'DESTRUCTIBLE_WALL') {
+      const block = this.add.rectangle(
+        x,
+        y,
+        this.CELL_SIZE * 0.85,
+        this.CELL_SIZE * 0.85,
+        0xa0826d,
       );
-
-      this.players.set(`player-${index}`, player);
-    });
-
-    console.log('Created', this.players.size, 'players');
-  }
-
-  private setupInput(): void {
-    // Input basado en eventos individuales de teclas
-    this.input.keyboard!.on('keydown-UP', () => {
-      this.handleMoveInput(0, -1);
-    });
-
-    this.input.keyboard!.on('keydown-DOWN', () => {
-      this.handleMoveInput(0, 1);
-    });
-
-    this.input.keyboard!.on('keydown-LEFT', () => {
-      this.handleMoveInput(-1, 0);
-    });
-
-    this.input.keyboard!.on('keydown-RIGHT', () => {
-      this.handleMoveInput(1, 0);
-    });
-
-    this.input.keyboard!.on('keydown-SPACE', () => {
-      const localPlayer = this.players.get('player-0');
-      if (localPlayer) {
-        this.placeBomb(localPlayer);
-      }
-    });
-  }
-
-  private handleMoveInput(dx: number, dy: number): void {
-    const currentTime = this.time.now;
-
-    // Cooldown entre movimientos
-    if (currentTime - this.lastMoveTime < this.MOVE_COOLDOWN) {
-      return;
-    }
-
-    const localPlayer = this.players.get('player-0');
-    if (!localPlayer || !localPlayer.canMove()) {
-      return;
-    }
-
-    const currentPos = localPlayer.getGridPosition();
-    const newX = currentPos.x + dx;
-    const newY = currentPos.y + dy;
-
-    // Verificar si hay bloque en la nueva posición
-    if (this.hasBlockAt(newX, newY)) {
-      return;
-    }
-
-    // Verificar si hay bomba en la nueva posición
-    if (this.hasBombAt(newX, newY)) {
-      return;
-    }
-
-    // Intentar mover
-    if (localPlayer.moveToCell(newX, newY, this.BOARD_SIZE)) {
-      this.lastMoveTime = currentTime;
+      block.setData('blockType', 'destructible');
+      block.setData('gridX', tile.x);
+      block.setData('gridY', tile.y);
+      this.physics.add.existing(block, true);
+      this.blocks.add(block);
     }
   }
 
-  private hasBlockAt(gridX: number, gridY: number): boolean {
-    let hasBlock = false;
+  private updatePlayers(playersData: PlayerDTO[]): void {
+    console.log('🔄 Updating players:', playersData);
 
-    this.blocks.getChildren().forEach((block) => {
-      const b = block as Phaser.GameObjects.Rectangle;
-      if (b.getData('gridX') === gridX && b.getData('gridY') === gridY) {
-        hasBlock = true;
+    this.blocks.setVisible(false);
+    this.indestructibleBlocks.setVisible(false);
+
+    playersData.forEach((playerData) => {
+      let player = this.players.get(playerData.id);
+
+      if (!player) {
+        const colorMap: Record<number, string> = {
+          0: 'blue',
+          1: 'green',
+          2: 'orange',
+          3: 'purple',
+        };
+
+        const index = this.players.size;
+        const color = colorMap[index] || 'blue';
+
+        player = new Player(
+          this,
+          playerData.posX * this.CELL_SIZE + this.CELL_SIZE / 2,
+          playerData.posY * this.CELL_SIZE + this.CELL_SIZE / 2,
+          `player-${color}`,
+          playerData.id,
+          this.CELL_SIZE,
+        );
+
+        this.players.set(playerData.id, player);
+        console.log('➕ Created player:', playerData.id);
+      } else {
+        const currentPos = player.getGridPosition();
+        if (currentPos.x !== playerData.posX || currentPos.y !== playerData.posY) {
+          player.moveToCell(playerData.posX, playerData.posY, this.BOARD_SIZE);
+        }
+
+        if (playerData.lifeCount !== undefined) {
+          player.setLives(playerData.lifeCount);
+        }
       }
     });
 
-    this.indestructibleBlocks.getChildren().forEach((block) => {
-      const b = block as Phaser.GameObjects.Rectangle;
-      if (b.getData('gridX') === gridX && b.getData('gridY') === gridY) {
-        hasBlock = true;
-      }
-    });
-
-    return hasBlock;
+    this.blocks.setVisible(true);
+    this.indestructibleBlocks.setVisible(true);
   }
 
-  private hasBombAt(gridX: number, gridY: number): boolean {
-    let hasBomb = false;
+  private updateBombs(bombsData: BombDTO[]): void {
+    if (!this.bombs) return; // Validar grupo existe
+
+    const currentBombIds = new Set(bombsData.map((b) => b.id));
 
     this.bombs.getChildren().forEach((bomb) => {
-      const b = bomb as Phaser.GameObjects.Container;
-      const bombGridX = b.getData('gridX');
-      const bombGridY = b.getData('gridY');
-      if (bombGridX === gridX && bombGridY === gridY) {
-        hasBomb = true;
+      const container = bomb as Phaser.GameObjects.Container;
+      const bombId = container.getData('bombId') as string | undefined;
+      if (bombId && !currentBombIds.has(bombId)) {
+        bomb.destroy();
       }
     });
 
-    return hasBomb;
+    bombsData.forEach((bombData) => {
+      const existingBomb = this.bombs.getChildren().find((b) => {
+        const container = b as Phaser.GameObjects.Container;
+        return container.getData('bombId') === bombData.id;
+      });
+
+      if (!existingBomb) {
+        this.createBombVisual(bombData);
+      }
+    });
   }
 
-  private setupGroups(): void {
-    this.bombs = this.add.group();
-    this.powerups = this.add.group();
-  }
-
-  update(): void {
-    // Ya no necesitamos update para input, se maneja con eventos
-  }
-
-  private placeBomb(player: Player): void {
-    const pos = player.getGridPosition();
-
-    // Verificar si ya hay una bomba aquí
-    if (this.hasBombAt(pos.x, pos.y)) {
-      return;
-    }
-
-    const bombX = pos.x * this.CELL_SIZE + this.CELL_SIZE / 2;
-    const bombY = pos.y * this.CELL_SIZE + this.CELL_SIZE / 2;
+  private createBombVisual(bombData: BombDTO): void {
+    const bombX = bombData.posX * this.CELL_SIZE + this.CELL_SIZE / 2;
+    const bombY = bombData.posY * this.CELL_SIZE + this.CELL_SIZE / 2;
 
     const bomb = this.add.container(bombX, bombY);
-    bomb.setData('gridX', pos.x);
-    bomb.setData('gridY', pos.y);
+    bomb.setData('bombId', bombData.id);
+    bomb.setData('gridX', bombData.posX);
+    bomb.setData('gridY', bombData.posY);
 
-    // Huevo base
     const eggBody = this.add.ellipse(0, 0, this.CELL_SIZE * 0.6, this.CELL_SIZE * 0.75, 0xffe4b5);
     const eggShine = this.add.ellipse(
       -5,
@@ -322,7 +306,6 @@ export class GameScene extends Phaser.Scene {
     bomb.add([eggBody, eggShine, spot1, spot2, fuse, spark]);
     this.bombs.add(bomb);
 
-    // Animaciones
     this.tweens.add({
       targets: spark,
       alpha: { from: 1, to: 0.3 },
@@ -339,198 +322,136 @@ export class GameScene extends Phaser.Scene {
       yoyo: true,
       repeat: -1,
     });
-
-    // Explotar en 3 segundos
-    this.time.delayedCall(3000, () => {
-      this.explodeBomb(bomb, pos.x, pos.y);
-    });
   }
 
-  private explodeBomb(bomb: Phaser.GameObjects.Container, gridX: number, gridY: number): void {
-    // Animación de explosión
-    const explosionCenter = this.add.circle(bomb.x, bomb.y, this.CELL_SIZE * 0.8, 0xff4500);
-    const explosionOuter = this.add.circle(bomb.x, bomb.y, this.CELL_SIZE * 0.5, 0xffd700);
+  private updatePowerUps(powerUpsData: PowerUpDTO[]): void {
+    if (!this.powerups) return; // Validar grupo existe
 
-    this.tweens.add({
-      targets: [explosionCenter, explosionOuter],
-      scale: { from: 0.3, to: 2 },
-      alpha: { from: 1, to: 0 },
-      duration: 400,
-      onComplete: () => {
-        explosionCenter.destroy();
-        explosionOuter.destroy();
-      },
+    const currentPowerUpIds = new Set(powerUpsData.map((p) => p.id));
+
+    this.powerups.getChildren().forEach((powerup) => {
+      const circle = powerup as Phaser.GameObjects.Arc;
+      const powerupId = circle.getData('powerupId') as string | undefined;
+      if (powerupId && !currentPowerUpIds.has(powerupId)) {
+        powerup.destroy();
+      }
     });
 
-    bomb.destroy();
+    powerUpsData.forEach((powerUpData) => {
+      const existing = this.powerups.getChildren().find((p) => {
+        const circle = p as Phaser.GameObjects.Arc;
+        return circle.getData('powerupId') === powerUpData.id;
+      });
 
-    // Rango de explosión
-    const range = 2;
-    const directions = [
-      { dx: 0, dy: 0 },
-      { dx: 1, dy: 0 },
-      { dx: -1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: 0, dy: -1 },
-    ];
-
-    directions.forEach(({ dx, dy }) => {
-      for (let i = 0; i <= range; i++) {
-        const targetX = gridX + dx * i;
-        const targetY = gridY + dy * i;
-
-        if (
-          targetX < 0 ||
-          targetX >= this.BOARD_SIZE ||
-          targetY < 0 ||
-          targetY >= this.BOARD_SIZE
-        ) {
-          break;
-        }
-
-        const cellX = targetX * this.CELL_SIZE + this.CELL_SIZE / 2;
-        const cellY = targetY * this.CELL_SIZE + this.CELL_SIZE / 2;
-
-        // Efecto visual
-        if (i > 0) {
-          const flame = this.add.circle(cellX, cellY, this.CELL_SIZE * 0.4, 0xff6600);
-          this.tweens.add({
-            targets: flame,
-            scale: { from: 0.5, to: 1.5 },
-            alpha: { from: 1, to: 0 },
-            duration: 300,
-            onComplete: () => flame.destroy(),
-          });
-        }
-
-        // Destruir bloques
-        let blockDestroyed = false;
-        this.blocks.getChildren().forEach((block) => {
-          const b = block as Phaser.GameObjects.Rectangle;
-          if (b.getData('gridX') === targetX && b.getData('gridY') === targetY) {
-            this.tweens.add({
-              targets: block,
-              alpha: 0,
-              scale: 0,
-              duration: 200,
-              onComplete: () => block.destroy(),
-            });
-            blockDestroyed = true;
-          }
-        });
-
-        // Si destruyó un bloque, detener expansión en esta dirección
-        if (blockDestroyed) break;
-
-        // Bloque indestructible detiene la explosión
-        if (this.hasBlockAt(targetX, targetY)) break;
-
-        // Dañar jugadores
-        this.players.forEach((player) => {
-          const playerPos = player.getGridPosition();
-          if (playerPos.x === targetX && playerPos.y === targetY) {
-            player.takeDamage();
-            if (!player.isAlive()) {
-              this.checkGameOver();
-            }
-          }
-        });
+      if (!existing) {
+        this.createPowerUpVisual(powerUpData);
       }
     });
   }
 
-  private checkGameOver(): void {
-    const alivePlayers = Array.from(this.players.values()).filter((p) => p.isAlive());
+  private createPowerUpVisual(powerUpData: PowerUpDTO): void {
+    const x = powerUpData.posX * this.CELL_SIZE + this.CELL_SIZE / 2;
+    const y = powerUpData.posY * this.CELL_SIZE + this.CELL_SIZE / 2;
 
-    if (alivePlayers.length <= 1) {
-      const winner = alivePlayers[0];
-      const allPlayerIds = Array.from(this.players.keys());
-      this.scene.start('GameOverScene', {
-        winner: winner?.getPlayerId(),
-        players: allPlayerIds,
-      });
-    }
-  }
+    const colors: Record<string, number> = {
+      SPEED_UP: 0x00ff00,
+      BOMB_RANGE_UP: 0xff0000,
+      BOMB_COUNT_UP: 0x0000ff,
+      EXTRA_LIFE: 0xffd700,
+      TEMPORARY_SHIELD: 0x00ffff,
+    };
 
-  private startPowerupSpawner(): void {
-    this.time.addEvent({
-      delay: Phaser.Math.Between(5000, 10000),
-      callback: () => {
-        this.spawnRandomPowerup();
-        this.startPowerupSpawner();
-      },
-      callbackScope: this,
+    const color = colors[powerUpData.type] || 0xffffff;
+    const powerup = this.add.circle(x, y, this.CELL_SIZE * 0.3, color);
+    powerup.setData('powerupId', powerUpData.id);
+    powerup.setData('type', powerUpData.type);
+    this.powerups.add(powerup);
+
+    this.tweens.add({
+      targets: powerup,
+      scale: { from: 0.8, to: 1.2 },
+      alpha: { from: 0.7, to: 1 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
     });
   }
 
-  private spawnRandomPowerup(): void {
-    const types = ['speed', 'explosion', 'bomb'];
-    const colors = { speed: 0x00ff00, explosion: 0xff0000, bomb: 0x0000ff };
+  // private updateTiles(tiles: TileDTO[][]): void {
+  //   if (!this.blocks) return;
+  //
+  //   this.blocks.getChildren().forEach((block) => {
+  //     const rect = block as Phaser.GameObjects.Rectangle;
+  //     const gridX = rect.getData('gridX') as number;
+  //     const gridY = rect.getData('gridY') as number;
+  //
+  //     const tile = tiles[gridY]?.[gridX];
+  //     if (!tile || tile.type !== 'DESTRUCTIBLE_WALL') {
+  //       this.tweens.add({
+  //         targets: block,
+  //         alpha: 0,
+  //         scale: 0,
+  //         duration: 200,
+  //         onComplete: () => block.destroy(),
+  //       });
+  //     }
+  //   });
+  // }
 
-    let validPosition = false;
-    let gridX = 0;
-    let gridY = 0;
-    let attempts = 0;
+  private setupGroups(): void {
+    this.bombs = this.add.group();
+    this.powerups = this.add.group();
+    this.blocks = this.add.group();
+    this.indestructibleBlocks = this.add.group();
+  }
 
-    while (!validPosition && attempts < 50) {
-      gridX = Phaser.Math.Between(0, this.BOARD_SIZE - 1);
-      gridY = Phaser.Math.Between(0, this.BOARD_SIZE - 1);
-      attempts++;
+  private setupInput(): void {
+    this.input.keyboard!.on('keydown-UP', () => this.handleMoveInput(0, -1));
+    this.input.keyboard!.on('keydown-DOWN', () => this.handleMoveInput(0, 1));
+    this.input.keyboard!.on('keydown-LEFT', () => this.handleMoveInput(-1, 0));
+    this.input.keyboard!.on('keydown-RIGHT', () => this.handleMoveInput(1, 0));
+    this.input.keyboard!.on('keydown-SPACE', () => this.handlePlaceBomb());
+  }
 
-      const isCorner =
-        (gridX < 2 && gridY < 2) ||
-        (gridX >= this.BOARD_SIZE - 2 && gridY < 2) ||
-        (gridX < 2 && gridY >= this.BOARD_SIZE - 2) ||
-        (gridX >= this.BOARD_SIZE - 2 && gridY >= this.BOARD_SIZE - 2);
+  private handleMoveInput(dx: number, dy: number): void {
+    console.log('🎹 Key pressed:', dx, dy);
+    const currentTime = this.time.now;
 
-      if (isCorner) continue;
-      if (this.hasBlockAt(gridX, gridY)) continue;
-      if (this.hasBombAt(gridX, gridY)) continue;
-
-      // Verificar jugadores
-      let hasPlayer = false;
-      this.players.forEach((player) => {
-        const pos = player.getGridPosition();
-        if (pos.x === gridX && pos.y === gridY) {
-          hasPlayer = true;
-        }
-      });
-
-      if (hasPlayer) continue;
-
-      validPosition = true;
+    if (currentTime - this.lastMoveTime < this.MOVE_COOLDOWN) {
+      return;
     }
 
-    if (validPosition) {
-      const cellX = gridX * this.CELL_SIZE + this.CELL_SIZE / 2;
-      const cellY = gridY * this.CELL_SIZE + this.CELL_SIZE / 2;
-      const type = Phaser.Utils.Array.GetRandom(types);
+    const directionMap: Record<string, Direction> = {
+      '0,-1': Direction.UP,
+      '0,1': Direction.DOWN,
+      '-1,0': Direction.LEFT,
+      '1,0': Direction.RIGHT,
+    };
 
-      const powerup = this.add.circle(
-        cellX,
-        cellY,
-        this.CELL_SIZE * 0.3,
-        colors[type as keyof typeof colors],
-      );
-      powerup.setData('type', type);
-      this.powerups.add(powerup);
+    const direction = directionMap[`${dx},${dy}`];
 
-      powerup.setScale(0);
-      this.tweens.add({
-        targets: powerup,
-        scale: 1,
-        duration: 300,
-        ease: 'Back.easeOut',
-      });
+    console.log('📍 Direction:', direction);
+    console.log('🎮 gameActions:', this.gameActions);
 
-      this.tweens.add({
-        targets: powerup,
-        scale: { from: 0.8, to: 1.2 },
-        alpha: { from: 0.7, to: 1 },
-        duration: 800,
-        yoyo: true,
-        repeat: -1,
-      });
+    if (direction && this.gameActions?.sendMove) {
+      console.log('✅ Calling sendMove');
+
+      this.gameActions.sendMove(direction);
+      this.lastMoveTime = currentTime;
+    } else {
+      console.log('❌ Cannot send move');
     }
+  }
+
+  private handlePlaceBomb(): void {
+    const localPlayer = Array.from(this.players.values())[0];
+    if (localPlayer && this.gameActions?.placeBomb) {
+      const pos = localPlayer.getGridPosition();
+      this.gameActions.placeBomb({ x: pos.x, y: pos.y });
+    }
+  }
+
+  update(): void {
+    // El update ahora se maneja mediante WebSocket
   }
 }

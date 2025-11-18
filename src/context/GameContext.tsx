@@ -91,6 +91,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setGameState(notification.initialState);
         gameStartCallbacks.forEach((cb) => cb());
       });
+
+      webSocketService.subscribeToGameStart(sid, (notification) => {
+        console.log('🎮 Game starting!', notification); // Agregar
+        setGameState(notification.initialState);
+        gameStartCallbacks.forEach((cb) => cb());
+      });
     },
     [bombExplodedCallbacks, gameStartCallbacks, playerKilledCallbacks, powerUpCollectedCallbacks],
   );
@@ -157,8 +163,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendMove = useCallback(
     (direction: PlayerMoveRequest['direction']) => {
+      console.log('🎯 sendMove called:', { sessionId, playerId, direction });
       if (!sessionId || !playerId) return;
 
+      console.log('📤 Calling webSocketService.sendPlayerMove');
       webSocketService.sendPlayerMove({
         sessionId,
         playerId,
