@@ -8,11 +8,24 @@ import type {
   BombExplodedEvent,
   PlayerKilledEvent,
   PowerUpCollectedEvent,
-  // StartGameRequest,
   GameStartNotification,
 } from '@/types/websocket-types';
 
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080'; // TODO: Validate URL from deployment
+/**
+ * Determines the WebSocket base URL from environment variables.
+ * Automatically handles protocol (ws:// for local, wss:// for HTTPS).
+ */
+const getWebSocketBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_WS_BASE_URL;
+
+  if (!envUrl) {
+    return 'http://localhost:8080';
+  }
+
+  return envUrl;
+};
+
+const WS_BASE_URL = getWebSocketBaseUrl();
 const WS_ENDPOINT = '/ws';
 
 type MessageHandler<T> = (data: T) => void;
