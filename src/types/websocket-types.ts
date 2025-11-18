@@ -55,11 +55,15 @@ export interface PowerUpDTO {
 
 export interface GameStateUpdate {
   sessionId: string;
+  status: string; // 'WAITING' | 'IN_PROGRESS' | 'FINISHED'
+  tiles: TileDTO[][];
   players: PlayerDTO[];
   bombs: BombDTO[];
+  explosions: ExplosionDTO[]; // Agregar si no existe
   powerUps: PowerUpDTO[];
-  timestamp: number;
-  phase: GamePhase;
+  serverTime: number;
+  timestamp?: number;
+  phase?: GamePhase;
 }
 
 export interface StartGameRequest {
@@ -116,4 +120,28 @@ export interface PowerUpCollectedEvent {
     multiplier: number;
   };
   timestamp: number;
+}
+
+export enum TileType {
+  EMPTY = 'EMPTY',
+  SOLID_WALL = 'SOLID_WALL',
+  DESTRUCTIBLE_WALL = 'DESTRUCTIBLE_WALL',
+}
+
+export interface TileDTO {
+  x: number;
+  y: number;
+  type: TileType;
+  occupied: boolean;
+  destructible: boolean;
+  hasBomb: boolean;
+  hasPowerUp: boolean;
+}
+
+export interface ExplosionDTO {
+  id: string;
+  posX: number;
+  posY: number;
+  range: number;
+  remainingTime: number;
 }

@@ -5,9 +5,9 @@ import { GameOverScene } from './scenes/GameOverScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 672,
-  height: 672,
-  backgroundColor: '#D4A574',
+  width: 728,
+  height: 728,
+  backgroundColor: '#3E9E57',
   physics: {
     default: 'arcade',
     arcade: {
@@ -19,5 +19,10 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  render: {
+    antialias: true,
+    pixelArt: false,
+    roundPixels: true,
   },
 };

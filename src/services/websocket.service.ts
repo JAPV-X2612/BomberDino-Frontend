@@ -8,11 +8,24 @@ import type {
   BombExplodedEvent,
   PlayerKilledEvent,
   PowerUpCollectedEvent,
-  // StartGameRequest,
   GameStartNotification,
 } from '@/types/websocket-types';
 
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080'; // TODO: Validate URL from deployment
+/**
+ * Determines the WebSocket base URL from environment variables.
+ * Automatically handles protocol (ws:// for local, wss:// for HTTPS).
+ */
+const getWebSocketBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_WS_BASE_URL;
+
+  if (!envUrl) {
+    return 'http://localhost:8080';
+  }
+
+  return envUrl;
+};
+
+const WS_BASE_URL = getWebSocketBaseUrl();
 const WS_ENDPOINT = '/ws';
 
 type MessageHandler<T> = (data: T) => void;
@@ -133,29 +146,46 @@ class WebSocketService {
     console.log(`Subscribed to ${destination}`);
   }
 
-  // unsubscribe(destination: string): void {
-  //   const subscription = this.subscriptions.get(destination);
-  //   if (subscription) {
-  //     subscription.unsubscribe();
-  //     this.subscriptions.delete(destination);
-  //     console.log(`Unsubscribed from ${destination}`);
-  //   }
-  // }
-  //
-  // sendStartGame(request: StartGameRequest) {
-  //   this.send(`/app/room/${request.sessionId}/start`, request);
-  // }
+  // En websocket.service.ts, actualiza sendPlayerMove:
 
   sendPlayerMove(request: PlayerMoveRequest): void {
-    this.send('/app/game/move', request);
+    if (!this.client?.connected) return;
+
+    const payload = {
+      ...request,
+      timestamp: Date.now(),
+    };
+
+    console.log('📤 Sending move:', payload);
+
+    this.client.publish({
+      destination: '/app/game/move',
+      body: JSON.stringify(payload),
+    });
   }
 
   sendPlaceBomb(request: PlaceBombRequest): void {
-    this.send('/app/game/bomb', request);
+    if (!this.client?.connected) return;
+
+    this.client.publish({
+      destination: '/app/game/bomb',
+      body: JSON.stringify({
+        ...request,
+        timestamp: Date.now(),
+      }),
+    });
   }
 
   sendPowerUpCollect(request: PowerUpCollectRequest): void {
-    this.send('/app/game/powerup', request);
+    if (!this.client?.connected) return;
+
+    this.client.publish({
+      destination: '/app/game/powerup',
+      body: JSON.stringify({
+        ...request,
+        timestamp: Date.now(),
+      }),
+    });
   }
 
   private send<T>(destination: string, body: T): void {
