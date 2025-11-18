@@ -113,7 +113,7 @@ export const GamePage: FC = () => {
   return (
     <div className="game-page">
       <Hud players={players} timeRemaining={timeRemaining} />
-      <GameCanvas />
+      <GameCanvas sessionId={''} playerId={''} />
     </div>
   );
 };

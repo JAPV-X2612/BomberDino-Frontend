@@ -31,6 +31,7 @@ interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGame = (): GameContextValue => {
   const context = useContext(GameContext);
   if (!context) {
@@ -87,6 +88,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       webSocketService.subscribeToGameStart(sid, (notification) => {
         console.log('Game starting!', notification);
+        setGameState(notification.initialState);
+        gameStartCallbacks.forEach((cb) => cb());
+      });
+
+      webSocketService.subscribeToGameStart(sid, (notification) => {
+        console.log('🎮 Game starting!', notification); // Agregar
         setGameState(notification.initialState);
         gameStartCallbacks.forEach((cb) => cb());
       });
@@ -156,8 +163,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendMove = useCallback(
     (direction: PlayerMoveRequest['direction']) => {
+      console.log('🎯 sendMove called:', { sessionId, playerId, direction });
       if (!sessionId || !playerId) return;
 
+      console.log('📤 Calling webSocketService.sendPlayerMove');
       webSocketService.sendPlayerMove({
         sessionId,
         playerId,
