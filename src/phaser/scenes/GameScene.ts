@@ -53,7 +53,7 @@ export class GameScene extends Phaser.Scene {
   updateGameState(state: GameStateUpdate): void {
     console.log('📦 Updating game state:', state);
     console.log('📦 updateGameState CALLED at', new Date().toISOString());
-    console.log('📦 State:', state);
+    // console.log('📦 State:', state);
 
     if (!this.sceneReady) {
       console.warn('⚠️ Scene not ready yet, saving state for later');
@@ -246,7 +246,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (playerData.lifeCount !== undefined) {
-          player.setLives(playerData.lifeCount);
+          player.setLives(playerData.lifeCount - playerData.deaths);
         }
       }
     });
