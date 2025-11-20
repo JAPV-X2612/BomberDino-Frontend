@@ -86,7 +86,9 @@ export const GamePage: FC = () => {
     const handlePlayerDamage = (event: CustomEvent) => {
       const { playerId: damagedPlayerId, lives } = event.detail;
       setPlayers((prev) =>
-        prev.map((p) => (p.id === damagedPlayerId ? { ...p, lives, deaths: p.deaths + 1,isAlive: lives > 0 } : p)),
+        prev.map((p) =>
+          p.id === damagedPlayerId ? { ...p, lives, deaths: p.deaths + 1, isAlive: lives > 0 } : p,
+        ),
       );
     };
 

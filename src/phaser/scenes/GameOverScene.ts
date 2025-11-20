@@ -5,10 +5,11 @@ export class GameOverScene extends Phaser.Scene {
     super({ key: 'GameOverScene' });
   }
 
-  create(data: { winner?: string }): void {
+  create(data: { winner?: string; winnerColor?: string }): void {
     const { width, height } = this.cameras.main;
 
-    this.add.rectangle(width / 2, height / 2, width, height, 0x087958);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x206537);
+
     const title = this.add.text(width / 2, height * 0.15, 'GANADOR', {
       fontSize: '96px',
       color: '#FFFFFF',
@@ -27,27 +28,27 @@ export class GameOverScene extends Phaser.Scene {
       ease: 'Bounce.easeOut',
     });
 
-    if (data.winner) {
-      this.createWinnerAvatar(width / 2, height * 0.45, data.winner);
+    if (data.winner && data.winnerColor) {
+      this.createWinnerAvatar(width / 2, height * 0.45, data.winnerColor);
     }
 
     this.createButtons(width, height);
-
     this.cameras.main.fadeIn(500, 0, 0, 0);
   }
 
-  private createWinnerAvatar(x: number, y: number, playerId: string): void {
+  private createWinnerAvatar(x: number, y: number, playerTexture: string): void {
     const container = this.add.container(x, y);
 
-    const dinoData: { [key: string]: { color: number; name: string } } = {
-      'player-0': { color: 0x4a9eff, name: 'DINO AZUL' },
-      'player-1': { color: 0x7ccd7c, name: 'DINO VERDE' },
-      'player-2': { color: 0xff8c42, name: 'DINO NARANJA' },
-      'player-3': { color: 0xb565d8, name: 'DINO MORADO' },
+    const colorMap: { [key: string]: { name: string } } = {
+      'player-blue': { name: 'DINO AZUL' },
+      'player-green': { name: 'DINO VERDE' },
+      'player-orange': { name: 'DINO NARANJA' },
+      'player-purple': { name: 'DINO MORADO' },
     };
 
-    const data = dinoData[playerId] || { color: 0xffd700, name: 'GANADOR' };
+    const data = colorMap[playerTexture] || { name: 'GANADOR' };
 
+    // Rayos dorados
     const rays = this.add.star(0, 0, 12, 30, 150, 0xffd700, 0.3);
     this.tweens.add({
       targets: rays,
@@ -56,126 +57,67 @@ export class GameOverScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    const platform = this.add.ellipse(0, 80, 200, 40, 0x8b4513, 0.6);
+    // Plataforma
+    const platform = this.add.ellipse(0, 80, 180, 40, 0x2d5a3d, 0.5);
 
-    const dinoColor = ['blue', 'green', 'orange', 'purple'][parseInt(playerId.split('-')[1]) || 0];
-    const textureName = `player-${dinoColor}`;
+    // Imagen del dino (extraer el color del texture: 'player-blue' -> 'blue')
+    const color = playerTexture.replace('player-', '');
+    const dinoSprite = this.add.image(0, 0, `player-${color}`);
+    dinoSprite.setScale(0.5); // Ajusta el tamaño según necesites
 
-    let dino: Phaser.GameObjects.GameObject;
-    if (this.textures.exists(textureName)) {
-      const dinoImage = this.add.image(0, 0, textureName);
-      dinoImage.setDisplaySize(220, 220);
-      dinoImage.setOrigin(0.5);
-      dino = dinoImage;
-    } else {
-      const dinoCircle = this.add.circle(0, 0, 110, data.color);
-      dinoCircle.setStrokeStyle(8, 0xffffff);
-      dino = dinoCircle;
-    }
+    // Corona
+    const crown = this.add.star(0, -100, 5, 15, 25, 0xffd700);
 
-    this.tweens.add({
-      targets: dino,
-      y: -20,
-      duration: 600,
-      ease: 'Sine.easeInOut',
-      yoyo: true,
-      repeat: -1,
-    });
+    container.add([rays, platform, dinoSprite, crown]);
 
-    const crown = this.createCrown(0, -100);
-
-    container.add([rays, platform, dino, crown]);
-
-    container.setScale(0);
+    // Animación flotante
     this.tweens.add({
       targets: container,
-      scale: 1,
+      y: y - 20,
       duration: 1000,
-      ease: 'Back.easeOut',
-      delay: 400,
-    });
-  }
-
-  private createCrown(x: number, y: number): Phaser.GameObjects.Container {
-    const crown = this.add.container(x, y);
-
-    const base = this.add.polygon(
-      0,
-      0,
-      [-35, 15, -25, -15, -12, -5, 0, -25, 12, -5, 25, -15, 35, 15],
-      0xffd700,
-    );
-    base.setStrokeStyle(3, 0xff8c00);
-
-    const egg1 = this.add.ellipse(-18, -8, 12, 15, 0xff6347);
-    const egg2 = this.add.ellipse(0, -18, 12, 15, 0x32cd32);
-    const egg3 = this.add.ellipse(18, -8, 12, 15, 0x1e90ff);
-
-    crown.add([base, egg1, egg2, egg3]);
-
-    this.tweens.add({
-      targets: crown,
-      angle: { from: -8, to: 8 },
-      duration: 1500,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
 
-    return crown;
+    // Nombre del ganador
+    const nameText = this.add.text(x, y + 140, data.name, {
+      fontSize: '48px',
+      color: '#FFFFFF',
+      fontFamily: 'Arial Black',
+      stroke: '#15402A',
+      strokeThickness: 6,
+    });
+    nameText.setOrigin(0.5);
   }
 
   private createButtons(width: number, height: number): void {
-    this.createButton(
-      width / 2,
-      height * 0.75,
-      'MENÚ',
-      0x654321,
-      () => (window.location.href = '/'),
-    );
-  }
+    const menuButton = this.add.rectangle(width / 2, height * 0.8, 200, 60, 0x8b6914);
+    menuButton.setStrokeStyle(4, 0xffd700);
+    menuButton.setInteractive({ useHandCursor: true });
 
-  private createButton(
-    x: number,
-    y: number,
-    text: string,
-    color: number,
-    onClick: () => void,
-  ): Phaser.GameObjects.Container {
-    const button = this.add.container(x, y);
-
-    const bg = this.add.rectangle(0, 0, 240, 60, color);
-    bg.setStrokeStyle(4, 0xffd700);
-    bg.setInteractive({ useHandCursor: true });
-
-    const label = this.add.text(0, 0, text, {
-      fontSize: '18px',
+    const menuText = this.add.text(width / 2, height * 0.8, 'MENÚ', {
+      fontSize: '32px',
       color: '#FFFFFF',
       fontFamily: 'Arial Black',
-      fontStyle: 'bold',
     });
-    label.setOrigin(0.5);
+    menuText.setOrigin(0.5);
 
-    button.add([bg, label]);
-
-    bg.on('pointerover', () => {
-      this.tweens.add({ targets: button, scale: 1.1, duration: 200 });
+    menuButton.on('pointerover', () => {
+      menuButton.setFillStyle(0xa67c1a);
+      menuButton.setScale(1.05);
     });
 
-    bg.on('pointerout', () => {
-      this.tweens.add({ targets: button, scale: 1, duration: 200 });
+    menuButton.on('pointerout', () => {
+      menuButton.setFillStyle(0x8b6914);
+      menuButton.setScale(1);
     });
 
-    bg.on('pointerdown', () => {
-      this.tweens.add({
-        targets: button,
-        scale: 0.95,
-        duration: 100,
-        yoyo: true,
-        onComplete: onClick,
+    menuButton.on('pointerdown', () => {
+      this.cameras.main.fadeOut(500, 0, 0, 0);
+      this.time.delayedCall(500, () => {
+        window.location.href = '/';
       });
     });
-
-    return button;
   }
 }

@@ -18,7 +18,7 @@ export class GameScene extends Phaser.Scene {
   private blocks!: Phaser.GameObjects.Group;
   private indestructibleBlocks!: Phaser.GameObjects.Group;
   private powerups!: Phaser.GameObjects.Group;
-
+  private playerColors: Map<string, string> = new Map();
   private readonly CELL_SIZE = 56;
   private BOARD_SIZE = 13;
   private sceneReady = false;
@@ -76,29 +76,34 @@ export class GameScene extends Phaser.Scene {
   }
 
   public handlePlayerKilled(event: PlayerKilledEvent): void {
-    console.log('💀 Player killed:', event.victimId);
+    console.log('💀 PLAYER KILLED EVENT:', event);
 
     const player = this.players.get(event.victimId);
     if (player) {
+      console.log('💀 Player before takeDamage:', {
+        id: event.victimId,
+        lives: player.getLives(),
+        isAlive: player.isAlive(),
+      });
+
       player.takeDamage();
+
+      console.log('💀 Player after takeDamage:', {
+        lives: player.getLives(),
+        isAlive: player.isAlive(),
+      });
 
       window.dispatchEvent(
         new CustomEvent('player-damage', {
           detail: {
             playerId: event.victimId,
-            lives: 0,
+            lives: player.getLives(),
           },
         }),
       );
     }
 
-    const alivePlayers = Array.from(this.players.values()).filter((p) => p.isAlive());
-    if (alivePlayers.length === 1) {
-      console.log('🏆 Winner:', alivePlayers[0].getPlayerId());
-      this.time.delayedCall(2000, () => {
-        this.scene.start('GameOverScene', { winner: alivePlayers[0].getPlayerId() });
-      });
-    }
+    this.checkForWinner();
   }
 
   create(): void {
@@ -209,7 +214,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePlayers(playersData: PlayerDTO[]): void {
-    console.log('🔄 Updating players:', playersData);
+    console.log(
+      '🔄 Updating players with data:',
+      playersData.map((p) => ({
+        id: p.id,
+        lifeCount: p.lifeCount,
+        deaths: p.deaths,
+        calculated: p.lifeCount - p.deaths,
+      })),
+    );
 
     this.blocks.setVisible(false);
     this.indestructibleBlocks.setVisible(false);
@@ -218,15 +231,13 @@ export class GameScene extends Phaser.Scene {
       let player = this.players.get(playerData.id);
 
       if (!player) {
-        const colorMap: Record<number, string> = {
-          0: 'blue',
-          1: 'green',
-          2: 'orange',
-          3: 'purple',
-        };
+        console.log('🆕 Creating new player with data:', playerData);
+        const colorMap = ['blue', 'green', 'orange', 'purple'];
+        const color =
+          this.playerColors.get(playerData.id) ||
+          colorMap[this.playerColors.size % colorMap.length];
 
-        const index = this.players.size;
-        const color = colorMap[index] || 'blue';
+        this.playerColors.set(playerData.id, color);
 
         player = new Player(
           this,
@@ -236,6 +247,13 @@ export class GameScene extends Phaser.Scene {
           playerData.id,
           this.CELL_SIZE,
         );
+
+        if (playerData.lifeCount !== undefined) {
+          player.setLives(playerData.lifeCount - playerData.deaths);
+          console.log(
+            `✅ Set initial lives for ${playerData.id}: ${playerData.lifeCount - playerData.deaths}`,
+          );
+        }
 
         this.players.set(playerData.id, player);
         console.log('➕ Created player:', playerData.id);
@@ -253,6 +271,37 @@ export class GameScene extends Phaser.Scene {
 
     this.blocks.setVisible(true);
     this.indestructibleBlocks.setVisible(true);
+
+    this.checkForWinner();
+  }
+
+  private checkForWinner(): void {
+    console.log('=== CHECKING FOR WINNER ===');
+
+    const alivePlayers = Array.from(this.players.values()).filter((p) => {
+      const lives = p.getLives(); // Usar getLives() directamente
+      console.log(`Player ${p.getPlayerId()} lives:`, lives);
+      return lives > 0;
+    });
+
+    console.log('🔍 Alive players count:', alivePlayers.length);
+
+    if (alivePlayers.length === 1 && this.players.size > 1) {
+      const winner = alivePlayers[0];
+      console.log('🏆 Winner:', winner.getPlayerId());
+
+      // Obtener el color del sprite del ganador
+      const winnerSprite = winner.getSprite();
+      const colorFromTexture = winnerSprite.texture.key; // Ej: 'player-blue'
+
+      this.time.delayedCall(2000, () => {
+        this.scene.start('GameOverScene', {
+          winner: winner.getPlayerId(),
+          winnerColor: colorFromTexture, // ⬅️ Pasar el color
+        });
+      });
+    }
+    console.log('=== END CHECK ===');
   }
 
   private updateBombs(bombsData: BombDTO[]): void {
