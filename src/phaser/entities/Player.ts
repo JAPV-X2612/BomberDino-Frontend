@@ -15,7 +15,7 @@ export class Player {
   private gridX: number;
   private gridY: number;
 
-  private targetX: number = 0; // ⬅️ AGREGAR
+  private targetX: number = 0;
   private targetY: number = 0;
 
   constructor(
@@ -129,5 +129,20 @@ export class Player {
 
   canMove(): boolean {
     return !this.isMoving;
+  }
+
+  update(): void {
+    const lerpFactor = 0.3;
+
+    const dx = this.targetX - this.sprite.x;
+    const dy = this.targetY - this.sprite.y;
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+      this.sprite.x += dx * lerpFactor;
+      this.sprite.y += dy * lerpFactor;
+    } else {
+      this.sprite.x = this.targetX;
+      this.sprite.y = this.targetY;
+    }
   }
 }

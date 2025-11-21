@@ -23,6 +23,8 @@ interface GamePlayer {
 export const GamePage: FC = () => {
   const navigate = useNavigate();
   const { gameState, sessionId, playerId, isConnected } = useGame();
+  console.log('📌 GamePage playerId:', playerId);
+  console.log('📌 GamePage sessionId:', sessionId);
   const [players, setPlayers] = useState<GamePlayer[]>([]);
   const [timeRemaining, setTimeRemaining] = useState(180);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -117,7 +119,7 @@ export const GamePage: FC = () => {
   return (
     <div className="game-page">
       <Hud players={players} timeRemaining={timeRemaining} />
-      <GameCanvas sessionId={''} playerId={''} />
+      <GameCanvas sessionId={sessionId} playerId={playerId} />
     </div>
   );
 };

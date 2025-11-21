@@ -129,7 +129,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       setSessionId(roomId);
-      setPlayerId(pid);
+      const serverPlayer = response.currentPlayers.find((p) => p.username === username);
+      if (serverPlayer) {
+        setPlayerId(serverPlayer.id);
+      } else {
+        setPlayerId(pid);
+      }
       subscribeToSession(roomId);
 
       return response;

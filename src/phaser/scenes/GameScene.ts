@@ -18,6 +18,7 @@ export class GameScene extends Phaser.Scene {
   private blocks!: Phaser.GameObjects.Group;
   private indestructibleBlocks!: Phaser.GameObjects.Group;
   private powerups!: Phaser.GameObjects.Group;
+  private localPlayerId?: string;
   private playerColors: Map<string, string> = new Map();
   private readonly CELL_SIZE = 56;
   private BOARD_SIZE = 13;
@@ -40,6 +41,7 @@ export class GameScene extends Phaser.Scene {
   setSessionContext(_sessionId: string, _playerId: string): void {
     console.log(_sessionId);
     console.log(_playerId);
+    this.localPlayerId = _playerId;
   }
 
   setGameActions(actions: {
@@ -216,6 +218,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePlayers(playersData: PlayerDTO[]): void {
+    console.log(
+      '🔍 Players from server:',
+      playersData.map((p) => p.id),
+    );
+    console.log('🔍 localPlayerId:', this.localPlayerId);
     console.log(
       '🔄 Updating players with data:',
       playersData.map((p) => ({
@@ -490,14 +497,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlaceBomb(): void {
-    const localPlayer = Array.from(this.players.values())[0];
+    console.log('🎯 handlePlaceBomb called');
+    console.log('🎯 localPlayerId:', this.localPlayerId);
+    console.log('🎯 players in map:', Array.from(this.players.keys()));
+
+    if (!this.localPlayerId) {
+      console.error('❌ No localPlayerId set');
+      return;
+    }
+
+    const localPlayer = this.players.get(this.localPlayerId);
+    console.log('🎯 localPlayer found:', localPlayer);
+
     if (localPlayer && this.gameActions?.placeBomb) {
       const pos = localPlayer.getGridPosition();
+      console.log('🎯 Placing bomb at:', pos);
       this.gameActions.placeBomb({ x: pos.x, y: pos.y });
+    } else {
+      console.error('❌ Cannot place bomb. Player or action missing');
     }
   }
 
   update(): void {
     // El update ahora se maneja mediante WebSocket
+    this.players.forEach((player) => player.update());
   }
 }
