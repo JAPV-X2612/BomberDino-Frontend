@@ -29,6 +29,7 @@ export interface Player {
   color: DinoColor;
   position: Position;
   lives: number;
+  deaths: number;
   speed: number;
   bombRange: number;
   maxBombs: number;

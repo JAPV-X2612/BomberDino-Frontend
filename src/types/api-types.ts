@@ -35,6 +35,7 @@ export interface GameRoomResponse {
   currentPlayers: PlayerDTO[];
   maxPlayers: number;
   isPrivate: boolean;
+  playerId: string;
 }
 
 export interface PlayerDTO {
