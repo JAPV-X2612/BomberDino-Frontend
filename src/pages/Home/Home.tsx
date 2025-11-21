@@ -2,6 +2,7 @@ import { useState, type FC, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@components/common/Button/Button';
 import { Input } from '@components/common/Input/Input';
+import { Toast } from '@components/common/Toast/Toast';
 import { useGame } from '@/context/GameContext';
 import { useAuth } from '@/context/AuthContext';
 import './Home.css';
@@ -14,7 +15,15 @@ export const Home: FC = () => {
 
   const navigate = useNavigate();
   const { createRoom, joinRoom } = useGame();
-  const { isAuthenticated, isLoading: authLoading, user, login, logout } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    user,
+    login,
+    logout,
+    loginError,
+    clearLoginError
+  } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -24,13 +33,8 @@ export const Home: FC = () => {
   }, [isAuthenticated, user]);
 
   const handleLogin = async () => {
-    try {
-      setError(null);
-      await login();
-    } catch (err) {
-      setError('Error al iniciar sesión. Intenta de nuevo.');
-      console.error('Login error:', err);
-    }
+    setError(null);
+    await login();
   };
 
   const handleContinue = () => {
@@ -54,7 +58,7 @@ export const Home: FC = () => {
 
       navigate(`/lobby?roomId=${response.roomCode}`);
     } catch (err) {
-      setError('Error al crear la sala. Intenta de nuevo.');
+      setError('Error al crear la sala.\nIntenta de nuevo.');
       console.error('Error creating room:', err);
     } finally {
       setIsLoading(false);
@@ -77,7 +81,7 @@ export const Home: FC = () => {
       localStorage.setItem('sessionId', roomCode);
       navigate(`/lobby?roomId=${roomCode}`);
     } catch (err) {
-      setError('No se pudo unir a la sala. Verifica el código.');
+      setError('No se pudo unir a la sala.\nVerifica el código.');
       console.error('Error joining room:', err);
     } finally {
       setIsLoading(false);
@@ -88,7 +92,7 @@ export const Home: FC = () => {
     return (
         <div className="home-container">
           <h1 className="game-title">BomberDino</h1>
-          <p>Cargando...</p>
+          <p className="loading-text">Cargando...</p>
         </div>
     );
   }
@@ -100,12 +104,29 @@ export const Home: FC = () => {
         <div className="dino-bottom-left"></div>
         <div className="dino-bottom-right"></div>
 
+        {loginError && (
+            <Toast
+                message={loginError}
+                type="error"
+                onClose={clearLoginError}
+                duration={6000}
+            />
+        )}
+
+        {error && (
+            <Toast
+                message={error}
+                type="error"
+                onClose={() => setError(null)}
+                duration={5000}
+            />
+        )}
+
         {!isAuthenticated ? (
             <>
               <h1 className="game-title">BomberDino</h1>
               <div className="name-input-section">
                 <p className="auth-message">Inicia Sesión</p>
-                {error && <div className="error-message">{error}</div>}
                 <button
                     onClick={handleLogin}
                     disabled={authLoading}
@@ -136,7 +157,6 @@ export const Home: FC = () => {
             <>
               <h1 className="game-title">¡Empieza a Jugar!</h1>
               <div className="options-section">
-                {error && <div className="error-message">{error}</div>}
                 <Button onClick={handleCreateRoom} disabled={isLoading}>
                   {isLoading ? 'Creando...' : 'Crear Sala'}
                 </Button>
