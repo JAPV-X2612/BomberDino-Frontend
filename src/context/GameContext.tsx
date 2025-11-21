@@ -10,6 +10,8 @@ import type {
   PowerUpCollectedEvent,
 } from '@/types/websocket-types';
 import type { GameRoomResponse } from '@/types/api-types';
+import { apiService } from '@/services/api.service';
+import { useAuth } from '@/context/AuthContext';
 
 interface GameContextValue {
   sessionId: string | null;
@@ -52,6 +54,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [powerUpCollectedCallbacks] = useState<Set<(event: PowerUpCollectedEvent) => void>>(
     new Set(),
   );
+
+  const { accessToken } = useAuth();
+
+  useEffect(() => {
+    if (accessToken) {
+      apiService.setAccessToken(accessToken);
+    }
+  }, [accessToken]);
 
   useEffect(() => {
     webSocketService

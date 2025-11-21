@@ -13,15 +13,16 @@ import type {
 
 /**
  * Determines the WebSocket base URL from environment variables.
- * Automatically handles protocol (ws:// for local, wss:// for HTTPS).
  */
 const getWebSocketBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_WS_BASE_URL;
 
   if (!envUrl) {
+    console.warn('VITE_WS_BASE_URL not set, using localhost');
     return 'http://localhost:8080';
   }
 
+  console.log('WebSocket connecting to:', envUrl);
   return envUrl;
 };
 
@@ -30,17 +31,41 @@ const WS_ENDPOINT = '/ws';
 
 type MessageHandler<T> = (data: T) => void;
 
+/**
+ * WebSocket service for real-time game communication.
+ * Supports JWT authentication for secure connections.
+ */
 class WebSocketService {
   private client: Client | null = null;
   private subscriptions: Map<string, StompSubscription> = new Map();
   private isConnected: boolean = false;
   private reconnectAttempts: number = 0;
   private readonly maxReconnectAttempts: number = 5;
+  private accessToken: string | null = null;
 
+  /**
+   * Sets the access token for authenticated WebSocket connections.
+   * @param token JWT access token
+   */
+  setAccessToken(token: string | null): void {
+    this.accessToken = token;
+  }
+
+  /**
+   * Connects to WebSocket server with optional JWT authentication.
+   * @returns Promise that resolves when connected
+   */
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      const connectHeaders: Record<string, string> = {};
+
+      if (this.accessToken) {
+        connectHeaders['Authorization'] = `Bearer ${this.accessToken}`;
+      }
+
       this.client = new Client({
         webSocketFactory: () => new SockJS(`${WS_BASE_URL}${WS_ENDPOINT}`),
+        connectHeaders,
         debug: (str) => console.log('[STOMP Debug]', str),
         reconnectDelay: 5000,
         heartbeatIncoming: 4000,
@@ -146,8 +171,6 @@ class WebSocketService {
     console.log(`Subscribed to ${destination}`);
   }
 
-  // En websocket.service.ts, actualiza sendPlayerMove:
-
   sendPlayerMove(request: PlayerMoveRequest): void {
     if (!this.client?.connected) return;
 
@@ -187,22 +210,6 @@ class WebSocketService {
       }),
     });
   }
-
-  // private send<T>(destination: string, body: T): void {
-  //   if (!this.client || !this.isConnected) {
-  //     console.error('Cannot send: WebSocket not connected');
-  //     return;
-  //   }
-  //
-  //   this.client.publish({
-  //     destination,
-  //     body: JSON.stringify(body),
-  //   });
-  // }
-
-  // isConnectedStatus(): boolean {
-  //   return this.isConnected;
-  // }
 }
 
 export const webSocketService = new WebSocketService();
