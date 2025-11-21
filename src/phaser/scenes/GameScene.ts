@@ -195,6 +195,7 @@ export class GameScene extends Phaser.Scene {
       block.setData('blockType', 'indestructible');
       block.setData('gridX', tile.x);
       block.setData('gridY', tile.y);
+      block.setDepth(0);
       this.physics.add.existing(block, true);
       this.indestructibleBlocks.add(block);
     } else if (tile.type === 'DESTRUCTIBLE_WALL') {
@@ -208,6 +209,7 @@ export class GameScene extends Phaser.Scene {
       block.setData('blockType', 'destructible');
       block.setData('gridX', tile.x);
       block.setData('gridY', tile.y);
+      block.setDepth(0);
       this.physics.add.existing(block, true);
       this.blocks.add(block);
     }
@@ -223,9 +225,6 @@ export class GameScene extends Phaser.Scene {
         calculated: p.lifeCount - p.deaths,
       })),
     );
-
-    this.blocks.setVisible(false);
-    this.indestructibleBlocks.setVisible(false);
 
     playersData.forEach((playerData) => {
       let player = this.players.get(playerData.id);
@@ -268,9 +267,6 @@ export class GameScene extends Phaser.Scene {
         }
       }
     });
-
-    this.blocks.setVisible(true);
-    this.indestructibleBlocks.setVisible(true);
 
     this.checkForWinner();
   }
@@ -353,6 +349,7 @@ export class GameScene extends Phaser.Scene {
     const spark = this.add.circle(0, -this.CELL_SIZE * 0.5, 3, 0xff4500);
 
     bomb.add([eggBody, eggShine, spot1, spot2, fuse, spark]);
+    bomb.setDepth(35);
     this.bombs.add(bomb);
 
     this.tweens.add({
