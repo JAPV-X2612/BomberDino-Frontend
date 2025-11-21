@@ -11,6 +11,8 @@
     "build:prod": "vite build --mode production"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.26.2",
+    "@azure/msal-react": "^3.0.22",
     "@stomp/stompjs": "^7.2.1",
     "axios": "^1.12.2",
     "bootstrap": "^5.3.8",
