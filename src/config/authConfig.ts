@@ -17,7 +17,7 @@ if (!tenantId) {
 export const msalConfig: Configuration = {
     auth: {
         clientId: clientId || '',
-        authority: `https://login.microsoftonline.com/${tenantId || 'common'}`,
+        authority: 'https://login.microsoftonline.com/common',
         redirectUri: window.location.origin,
         postLogoutRedirectUri: window.location.origin,
         navigateToLoginRequestUrl: true,
@@ -32,5 +32,9 @@ export const msalConfig: Configuration = {
  * Scopes for login request.
  */
 export const loginRequest = {
-    scopes: ['openid', 'profile', 'email', 'User.Read'],
+    scopes: ['openid', 'profile', 'email'],
+};
+
+export const apiRequest = {
+    scopes: [`api://${clientId}/access_as_user`],
 };
