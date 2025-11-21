@@ -1,12 +1,12 @@
-import { useState, type FC } from 'react';
+import { useState, type FC, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@components/common/Button/Button';
 import { Input } from '@components/common/Input/Input';
 import { useGame } from '@/context/GameContext';
+import { useAuth } from '@/context/AuthContext';
 import './Home.css';
 
 export const Home: FC = () => {
-  const [playerName, setPlayerName] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -14,11 +14,27 @@ export const Home: FC = () => {
 
   const navigate = useNavigate();
   const { createRoom, joinRoom } = useGame();
+  const { isAuthenticated, isLoading: authLoading, user, login, logout } = useAuth();
 
-  const handleStart = () => {
-    if (playerName.trim()) {
-      localStorage.setItem('playerName', playerName);
-      localStorage.setItem('playerId', `player_${Date.now()}`);
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      localStorage.setItem('playerName', user.name || user.username || 'Player');
+      localStorage.setItem('playerId', user.localAccountId || `player_${Date.now()}`);
+    }
+  }, [isAuthenticated, user]);
+
+  const handleLogin = async () => {
+    try {
+      setError(null);
+      await login();
+    } catch (err) {
+      setError('Error al iniciar sesión. Intenta de nuevo.');
+      console.error('Login error:', err);
+    }
+  };
+
+  const handleContinue = () => {
+    if (isAuthenticated) {
       setShowOptions(true);
     }
   };
@@ -28,12 +44,12 @@ export const Home: FC = () => {
     setError(null);
 
     try {
+      const playerName = localStorage.getItem('playerName') || 'Player';
       const response = await createRoom(`${playerName}'s Room`, 4, 'default-map-001');
       localStorage.setItem('sessionId', response.roomId);
 
       const playerId = localStorage.getItem('playerId') || `player_${Date.now()}`;
       const username = localStorage.getItem('playerName') || 'Anonymous';
-      console.log(username);
       await joinRoom(response.roomCode, playerId, username);
 
       navigate(`/lobby?roomId=${response.roomCode}`);
@@ -68,50 +84,79 @@ export const Home: FC = () => {
     }
   };
 
-  return (
-    <div className="home-container">
-      <div className="dino-top-left"></div>
-      <div className="dino-top-right"></div>
-      <div className="dino-bottom-left"></div>
-      <div className="dino-bottom-right"></div>
-
-      {!showOptions ? (
-        <>
+  if (authLoading) {
+    return (
+        <div className="home-container">
           <h1 className="game-title">BomberDino</h1>
-          <div className="name-input-section">
-            <Input
-              value={playerName}
-              onChange={setPlayerName}
-              placeholder="Nombre de Usuario"
-              maxLength={15}
-            />
-            <Button onClick={handleStart} disabled={!playerName.trim() || isLoading}>
-              Ingresar
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <h1 className="game-title">¡Empieza a Jugar!</h1>
-          <div className="options-section">
-            {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
-            <Button onClick={handleCreateRoom} disabled={isLoading}>
-              {isLoading ? 'Creando...' : 'Crear Sala'}
-            </Button>
-            <div className="join-section">
-              <Button onClick={handleJoinRoom} variant="secondary" disabled={isLoading}>
-                {isLoading ? 'Uniéndose...' : 'Entrar a Sala'}
-              </Button>
-              <Input
-                value={roomCode}
-                onChange={setRoomCode}
-                placeholder="Código de sala"
-                maxLength={6}
-              />
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+          <p>Cargando...</p>
+        </div>
+    );
+  }
+
+  return (
+      <div className="home-container">
+        <div className="dino-top-left"></div>
+        <div className="dino-top-right"></div>
+        <div className="dino-bottom-left"></div>
+        <div className="dino-bottom-right"></div>
+
+        {!isAuthenticated ? (
+            <>
+              <h1 className="game-title">BomberDino</h1>
+              <div className="name-input-section">
+                <p className="auth-message">Inicia Sesión</p>
+                {error && <div className="error-message">{error}</div>}
+                <button
+                    onClick={handleLogin}
+                    disabled={authLoading}
+                    className="microsoft-login-btn"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 21 21">
+                    <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
+                    <rect x="11" y="1" width="10" height="10" fill="#7fba00"/>
+                    <rect x="1" y="11" width="10" height="10" fill="#00a4ef"/>
+                    <rect x="11" y="11" width="10" height="10" fill="#ffb900"/>
+                  </svg>
+                  <span>Continuar con Microsoft</span>
+                </button>
+              </div>
+            </>
+        ) : !showOptions ? (
+            <>
+              <h1 className="game-title">BomberDino</h1>
+              <div className="name-input-section">
+                <p className="welcome-message">¡Bienvenido, {user?.name || 'Jugador'}!</p>
+                <Button onClick={handleContinue}>Continuar</Button>
+                <Button onClick={logout} variant="secondary">
+                  Cerrar sesión
+                </Button>
+              </div>
+            </>
+        ) : (
+            <>
+              <h1 className="game-title">¡Empieza a Jugar!</h1>
+              <div className="options-section">
+                {error && <div className="error-message">{error}</div>}
+                <Button onClick={handleCreateRoom} disabled={isLoading}>
+                  {isLoading ? 'Creando...' : 'Crear Sala'}
+                </Button>
+                <div className="join-section">
+                  <Button onClick={handleJoinRoom} variant="secondary" disabled={isLoading}>
+                    {isLoading ? 'Uniéndose...' : 'Entrar a Sala'}
+                  </Button>
+                  <Input
+                      value={roomCode}
+                      onChange={setRoomCode}
+                      placeholder="Código de sala"
+                      maxLength={6}
+                  />
+                </div>
+                <Button onClick={() => setShowOptions(false)} variant="secondary">
+                  Volver
+                </Button>
+              </div>
+            </>
+        )}
+      </div>
   );
 };
