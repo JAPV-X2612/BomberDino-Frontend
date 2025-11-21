@@ -13,6 +13,7 @@ interface GamePlayer {
   color: DinoColor;
   position: { x: number; y: number };
   lives: number;
+  deaths: number;
   speed: number;
   bombRange: number;
   maxBombs: number;
@@ -22,6 +23,8 @@ interface GamePlayer {
 export const GamePage: FC = () => {
   const navigate = useNavigate();
   const { gameState, sessionId, playerId, isConnected } = useGame();
+  console.log('📌 GamePage playerId:', playerId);
+  console.log('📌 GamePage sessionId:', sessionId);
   const [players, setPlayers] = useState<GamePlayer[]>([]);
   const [timeRemaining, setTimeRemaining] = useState(180);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,6 +57,7 @@ export const GamePage: FC = () => {
         color: colors[idx % colors.length],
         position: { x: p.posX, y: p.posY },
         lives: p.lifeCount,
+        deaths: p.deaths || 0,
         speed: p.speed,
         bombRange: p.bombRange,
         maxBombs: p.bombCount,
@@ -84,7 +88,9 @@ export const GamePage: FC = () => {
     const handlePlayerDamage = (event: CustomEvent) => {
       const { playerId: damagedPlayerId, lives } = event.detail;
       setPlayers((prev) =>
-        prev.map((p) => (p.id === damagedPlayerId ? { ...p, lives, isAlive: lives > 0 } : p)),
+        prev.map((p) =>
+          p.id === damagedPlayerId ? { ...p, lives, deaths: p.deaths + 1, isAlive: lives > 0 } : p,
+        ),
       );
     };
 
@@ -113,7 +119,7 @@ export const GamePage: FC = () => {
   return (
     <div className="game-page">
       <Hud players={players} timeRemaining={timeRemaining} />
-      <GameCanvas sessionId={''} playerId={''} />
+      <GameCanvas sessionId={sessionId} playerId={playerId} />
     </div>
   );
 };

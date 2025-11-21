@@ -15,6 +15,9 @@ export class Player {
   private gridX: number;
   private gridY: number;
 
+  private targetX: number = 0;
+  private targetY: number = 0;
+
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -36,6 +39,10 @@ export class Player {
     this.sprite = scene.physics.add.sprite(x, y, texture);
     this.sprite.setDisplaySize(this.cellSize * 0.7, this.cellSize * 0.7);
     this.sprite.setCollideWorldBounds(true);
+    this.sprite.setDepth(30);
+
+    this.targetX = x;
+    this.targetY = y;
 
     // Desactivar velocidad - ahora usamos tweens para mover
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
@@ -108,39 +115,34 @@ export class Player {
 
   // Nuevo método para mover por casillas
   moveToCell(newGridX: number, newGridY: number, boardSize: number): boolean {
-    // Si ya está moviéndose, no permitir otro movimiento
-    if (this.isMoving) return false;
-
-    // Verificar límites del tablero
     if (newGridX < 0 || newGridX >= boardSize || newGridY < 0 || newGridY >= boardSize) {
       return false;
     }
 
-    // Calcular posición en píxeles
-    const targetX = newGridX * this.cellSize + this.cellSize / 2;
-    const targetY = newGridY * this.cellSize + this.cellSize / 2;
-
-    // Marcar como moviéndose
-    this.isMoving = true;
-
-    // Animar movimiento
-    this.scene.tweens.add({
-      targets: this.sprite,
-      x: targetX,
-      y: targetY,
-      duration: 150,
-      ease: 'Linear',
-      onComplete: () => {
-        this.isMoving = false;
-        this.gridX = newGridX;
-        this.gridY = newGridY;
-      },
-    });
+    this.targetX = newGridX * this.cellSize + this.cellSize / 2;
+    this.targetY = newGridY * this.cellSize + this.cellSize / 2;
+    this.gridX = newGridX;
+    this.gridY = newGridY;
 
     return true;
   }
 
   canMove(): boolean {
     return !this.isMoving;
+  }
+
+  update(): void {
+    const lerpFactor = 0.3;
+
+    const dx = this.targetX - this.sprite.x;
+    const dy = this.targetY - this.sprite.y;
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+      this.sprite.x += dx * lerpFactor;
+      this.sprite.y += dy * lerpFactor;
+    } else {
+      this.sprite.x = this.targetX;
+      this.sprite.y = this.targetY;
+    }
   }
 }

@@ -4,7 +4,7 @@ import { GameScene } from './scenes/GameScene';
 import { GameOverScene } from './scenes/GameOverScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
+  type: Phaser.CANVAS,
   width: 728,
   height: 728,
   backgroundColor: '#3E9E57',
@@ -22,7 +22,12 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   },
   render: {
     antialias: true,
-    pixelArt: false,
+    pixelArt: true,
     roundPixels: true,
+    transparent: false,
+    clearBeforeRender: false,
+    preserveDrawingBuffer: true,
+    failIfMajorPerformanceCaveat: false,
+    powerPreference: 'high-performance',
   },
 };
