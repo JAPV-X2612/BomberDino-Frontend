@@ -8,10 +8,14 @@ import type {
   BombExplodedEvent,
   PlayerKilledEvent,
   PowerUpCollectedEvent,
+  PlayerMovedEvent,
+  BombPlacedEvent,
+  HeartbeatEvent,
 } from '@/types/websocket-types';
 import type { GameRoomResponse } from '@/types/api-types';
 import { apiService } from '@/services/api.service';
 import { useAuth } from '@/context/AuthContext';
+import { syncManager } from '@/utils/SyncManager';
 
 interface GameContextValue {
   sessionId: string | null;
@@ -76,9 +80,51 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const subscribeToSession = useCallback(
     (sid: string) => {
-      webSocketService.subscribeToGameState(sid, (state) => {
+      console.log('🔌 Subscribing to session with NEW event-driven architecture:', sid);
+
+      // Configure syncManager resync callback
+      syncManager.setResyncCallback((state) => {
+        console.log('🔄 SyncManager triggered resync, updating game state');
         setGameState(state);
+        // Dispatch event for GameScene to handle
+        window.dispatchEvent(new CustomEvent('force-resync', { detail: state }));
       });
+
+      // ========================================================================
+      // NEW: Subscribe to lightweight events (replaces most GameStateUpdate)
+      // ========================================================================
+
+      // 1. Player movement events (lightweight)
+      webSocketService.subscribeToPlayerMoved(sid, (event: PlayerMovedEvent) => {
+        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'player-moved')) {
+          // Dispatch to GameScene for rendering
+          window.dispatchEvent(new CustomEvent('player-moved', { detail: event }));
+        }
+      });
+
+      // 2. Bomb placement events (lightweight)
+      webSocketService.subscribeToBombPlaced(sid, (event: BombPlacedEvent) => {
+        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'bomb-placed')) {
+          window.dispatchEvent(new CustomEvent('bomb-placed', { detail: event }));
+        }
+      });
+
+      // 3. Heartbeat (keep-alive, every 500ms)
+      webSocketService.subscribeToHeartbeat(sid, (event: HeartbeatEvent) => {
+        syncManager.updateHeartbeat();
+        syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'heartbeat');
+      });
+
+      // 4. Periodic full state sync (checkpoint, every 5s)
+      webSocketService.subscribeToPeriodicSync(sid, (state: GameStateUpdate) => {
+        console.log('📍 Periodic checkpoint received');
+        setGameState(state);
+        window.dispatchEvent(new CustomEvent('periodic-sync', { detail: state }));
+      });
+
+      // ========================================================================
+      // EXISTING: Keep these for specific events
+      // ========================================================================
 
       webSocketService.subscribeToBombExploded(sid, (event) => {
         bombExplodedCallbacks.forEach((cb) => cb(event));
@@ -97,16 +143,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       webSocketService.subscribeToGameStart(sid, (notification) => {
-        console.log('Game starting!', notification);
+        console.log('🎮 Game starting!', notification);
         setGameState(notification.initialState);
         gameStartCallbacks.forEach((cb) => cb());
       });
 
-      webSocketService.subscribeToGameStart(sid, (notification) => {
-        console.log('🎮 Game starting!', notification); // Agregar
-        setGameState(notification.initialState);
-        gameStartCallbacks.forEach((cb) => cb());
-      });
+      // Periodically check heartbeat
+      const heartbeatInterval = setInterval(() => {
+        syncManager.checkHeartbeat(sid);
+      }, 1000); // Check every second
+
+      return () => {
+        clearInterval(heartbeatInterval);
+        syncManager.resetSession(sid);
+      };
     },
     [bombExplodedCallbacks, gameStartCallbacks, playerKilledCallbacks, powerUpCollectedCallbacks],
   );

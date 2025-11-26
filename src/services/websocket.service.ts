@@ -9,6 +9,10 @@ import type {
   PlayerKilledEvent,
   PowerUpCollectedEvent,
   GameStartNotification,
+  PlayerMovedEvent,
+  BombPlacedEvent,
+  HeartbeatEvent,
+  PowerUpSpawnedEvent,
 } from '@/types/websocket-types';
 
 /**
@@ -144,6 +148,52 @@ class WebSocketService {
     handler: MessageHandler<{ playerId: string }>,
   ): void {
     this.subscribe(`/topic/game/${sessionId}/disconnect`, handler);
+  }
+
+  // ============================================================================
+  // NEW EVENT-DRIVEN SUBSCRIPTIONS (Performance Optimization)
+  // ============================================================================
+
+  /**
+   * Subscribe to lightweight player movement events.
+   * Replaces subscribeToGameState for individual player moves.
+   */
+  subscribeToPlayerMoved(sessionId: string, handler: MessageHandler<PlayerMovedEvent>): void {
+    this.subscribe(`/topic/game/${sessionId}/player-moved`, handler);
+  }
+
+  /**
+   * Subscribe to lightweight bomb placement events.
+   * Replaces subscribeToGameState for bomb placements.
+   */
+  subscribeToBombPlaced(sessionId: string, handler: MessageHandler<BombPlacedEvent>): void {
+    this.subscribe(`/topic/game/${sessionId}/bomb-placed`, handler);
+  }
+
+  /**
+   * Subscribe to heartbeat events (sent every 500ms).
+   * Allows detection of connection loss and packet loss.
+   */
+  subscribeToHeartbeat(sessionId: string, handler: MessageHandler<HeartbeatEvent>): void {
+    this.subscribe(`/topic/game/${sessionId}/heartbeat`, handler);
+  }
+
+  /**
+   * Subscribe to periodic full state synchronization (sent every 5 seconds).
+   * Acts as a checkpoint to prevent drift from accumulated delta updates.
+   */
+  subscribeToPeriodicSync(sessionId: string, handler: MessageHandler<GameStateUpdate>): void {
+    this.subscribe(`/topic/game/${sessionId}/sync`, handler);
+  }
+
+  /**
+   * Subscribe to power-up spawn events.
+   */
+  subscribeToPowerUpSpawned(
+    sessionId: string,
+    handler: MessageHandler<PowerUpSpawnedEvent>,
+  ): void {
+    this.subscribe(`/topic/game/${sessionId}/powerup-spawned`, handler);
   }
 
   private subscribe<T>(destination: string, handler: MessageHandler<T>): void {

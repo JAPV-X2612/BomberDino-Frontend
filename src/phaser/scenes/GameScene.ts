@@ -9,6 +9,8 @@ import type {
   PlayerDTO,
   BombDTO,
   PowerUpDTO,
+  PlayerMovedEvent,
+  BombPlacedEvent,
 } from '@/types/websocket-types';
 import { Direction } from '@/types/websocket-types';
 
@@ -516,6 +518,66 @@ export class GameScene extends Phaser.Scene {
     } else {
       console.error('❌ Cannot place bomb. Player or action missing');
     }
+  }
+
+  // ============================================================================
+  // NEW EVENT HANDLERS (Performance Optimization)
+  // ============================================================================
+
+  /**
+   * Handles individual player movement event.
+   * Only updates the specific player that moved (not all players).
+   */
+  handlePlayerMovedEvent(event: PlayerMovedEvent): void {
+    console.log('📍 Player moved event:', event);
+
+    const player = this.players.get(event.playerId);
+
+    if (player) {
+      // Only update THIS player's position
+      player.moveToCell(event.newX, event.newY, this.BOARD_SIZE);
+    } else {
+      // Player doesn't exist locally - might be desync
+      console.warn('⚠️ Unknown player moved:', event.playerId);
+    }
+  }
+
+  /**
+   * Handles individual bomb placement event.
+   * Only creates the specific bomb that was placed (not updating entire bomb list).
+   */
+  handleBombPlacedEvent(event: BombPlacedEvent): void {
+    console.log('💣 Bomb placed event:', event);
+
+    // Check if bomb already exists (prevent duplicates)
+    const existingBomb = this.bombs.getChildren().find((b) => {
+      const container = b as Phaser.GameObjects.Container;
+      return container.getData('bombId') === event.bombId;
+    });
+
+    if (!existingBomb) {
+      // Create ONLY this new bomb
+      this.createBombVisual({
+        id: event.bombId,
+        ownerId: event.playerId,
+        posX: event.x,
+        posY: event.y,
+        range: event.range,
+        timeToExplode: event.timeToExplode,
+      });
+    } else {
+      console.warn('⚠️ Bomb already exists:', event.bombId);
+    }
+  }
+
+  /**
+   * Handles periodic full state synchronization (checkpoint).
+   * Replaces entire game state to prevent drift.
+   */
+  handlePeriodicSync(state: GameStateUpdate): void {
+    console.log('🔄 Periodic checkpoint received');
+    // Use the existing updateGameState method for full sync
+    this.updateGameState(state);
   }
 
   update(): void {
