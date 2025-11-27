@@ -58,6 +58,7 @@ const forceLogoutInvalidAccount = async (): Promise<void> => {
  * @returns AuthContextValue
  * @throws Error if used outside AuthProvider
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextValue => {
     const context = useContext(AuthContext);
     if (!context) {
