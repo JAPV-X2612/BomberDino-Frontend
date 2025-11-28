@@ -35,6 +35,7 @@ export class GameScene extends Phaser.Scene {
   private lastMoveTime: number = 0;
   private readonly MOVE_COOLDOWN = 200;
   private boardInitialized = false;
+  private gameEnded = false; // Prevent multiple winner checks
 
   constructor() {
     super({ key: 'GameScene' });
@@ -281,6 +282,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkForWinner(): void {
+    // Prevent multiple winner checks after game ends
+    if (this.gameEnded) {
+      return;
+    }
+
     console.log('=== CHECKING FOR WINNER ===');
 
     const alivePlayers = Array.from(this.players.values()).filter((p) => {
@@ -294,6 +300,9 @@ export class GameScene extends Phaser.Scene {
     if (alivePlayers.length === 1 && this.players.size > 1) {
       const winner = alivePlayers[0];
       console.log('🏆 Winner:', winner.getPlayerId());
+
+      // Mark game as ended to prevent duplicate winner checks
+      this.gameEnded = true;
 
       // Obtener el color del sprite del ganador
       const winnerSprite = winner.getSprite();
