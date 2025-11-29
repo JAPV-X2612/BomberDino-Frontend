@@ -267,13 +267,21 @@ export class GameScene extends Phaser.Scene {
         this.players.set(playerData.id, player);
         console.log('➕ Created player:', playerData.id);
       } else {
+        // DIRTY-CHECKING: Only update if position actually changed
         const currentPos = player.getGridPosition();
-        if (currentPos.x !== playerData.posX || currentPos.y !== playerData.posY) {
+        const hasPositionChanged = currentPos.x !== playerData.posX || currentPos.y !== playerData.posY;
+
+        if (hasPositionChanged) {
+          console.log(`📍 Position changed for ${playerData.id}: (${currentPos.x},${currentPos.y}) → (${playerData.posX},${playerData.posY})`);
           player.moveToCell(playerData.posX, playerData.posY, this.BOARD_SIZE);
         }
 
-        if (playerData.lifeCount !== undefined) {
-          player.setLives(playerData.lifeCount - playerData.deaths);
+        // DIRTY-CHECKING: Only update lives if changed
+        const currentLives = player.getLives();
+        const newLives = playerData.lifeCount - playerData.deaths;
+        if (currentLives !== newLives) {
+          console.log(`💗 Lives changed for ${playerData.id}: ${currentLives} → ${newLives}`);
+          player.setLives(newLives);
         }
       }
     });
