@@ -57,13 +57,8 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
     };
   }, [sessionId, playerId, sendMove, placeBomb, collectPowerUp, gameState]);
 
-  useEffect(() => {
-    if (!sceneRef.current || !gameState) return;
-
-    if (sceneRef.current.scene.isActive()) {
-      sceneRef.current.updateGameState(gameState);
-    }
-  }, [gameState]);
+  // NOTE: Removed duplicate gameState listener - we only use the 'game-state-update' event
+  // to avoid calling updateGameState() twice per update
 
   useEffect(() => {
     const unsubscribeBombExploded = onBombExploded((event) => {
