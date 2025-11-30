@@ -83,19 +83,37 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Configure syncManager resync callback
       syncManager.setResyncCallback((state) => {
         setGameState(state);
-        // Dispatch event for GameScene to handle
         window.dispatchEvent(new CustomEvent('force-resync', { detail: state }));
       });
 
       // ========================================================================
-      // MAIN: Subscribe to full game state updates (CRITICAL FOR SYNC!)
+      // EVENT-DRIVEN: Subscribe to lightweight specific events (PERFORMANCE!)
       // ========================================================================
 
-      // Subscribe to full state after each action
-      webSocketService.subscribeToGameState(sid, (state: GameStateUpdate) => {
+      // 1. Player movement events (~100 bytes instead of ~5KB)
+      webSocketService.subscribeToPlayerMoved(sid, (event: PlayerMovedEvent) => {
+        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'player-moved')) {
+          window.dispatchEvent(new CustomEvent('player-moved', { detail: event }));
+        }
+      });
+
+      // 2. Bomb placement events (~150 bytes instead of ~5KB)
+      webSocketService.subscribeToBombPlaced(sid, (event: BombPlacedEvent) => {
+        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'bomb-placed')) {
+          window.dispatchEvent(new CustomEvent('bomb-placed', { detail: event }));
+        }
+      });
+
+      // 3. Heartbeat (keep-alive, every 500ms)
+      webSocketService.subscribeToHeartbeat(sid, (event: HeartbeatEvent) => {
+        syncManager.updateHeartbeat();
+        syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'heartbeat');
+      });
+
+      // 4. Periodic full sync (checkpoint every 5s to prevent drift)
+      webSocketService.subscribeToPeriodicSync(sid, (state: GameStateUpdate) => {
         setGameState(state);
-        // Dispatch to GameScene for rendering with dirty-checking
-        window.dispatchEvent(new CustomEvent('game-state-update', { detail: state }));
+        window.dispatchEvent(new CustomEvent('periodic-sync', { detail: state }));
       });
 
       // ========================================================================
