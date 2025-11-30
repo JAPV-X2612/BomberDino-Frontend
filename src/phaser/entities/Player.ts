@@ -132,7 +132,9 @@ export class Player {
   }
 
   update(): void {
-    const lerpFactor = 0.3;
+    // Increased lerp factor for smoother movement (was 0.3)
+    // Higher value = faster interpolation = less jitter when receiving frequent updates
+    const lerpFactor = 0.6;
 
     const dx = this.targetX - this.sprite.x;
     const dy = this.targetY - this.sprite.y;
