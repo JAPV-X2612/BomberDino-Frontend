@@ -91,35 +91,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       // ========================================================================
-      // NEW: Subscribe to lightweight events (replaces most GameStateUpdate)
+      // MAIN: Subscribe to full game state updates (CRITICAL FOR SYNC!)
       // ========================================================================
 
-      // 1. Player movement events (lightweight)
-      webSocketService.subscribeToPlayerMoved(sid, (event: PlayerMovedEvent) => {
-        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'player-moved')) {
-          // Dispatch to GameScene for rendering
-          window.dispatchEvent(new CustomEvent('player-moved', { detail: event }));
-        }
-      });
-
-      // 2. Bomb placement events (lightweight)
-      webSocketService.subscribeToBombPlaced(sid, (event: BombPlacedEvent) => {
-        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'bomb-placed')) {
-          window.dispatchEvent(new CustomEvent('bomb-placed', { detail: event }));
-        }
-      });
-
-      // 3. Heartbeat (keep-alive, every 500ms)
-      webSocketService.subscribeToHeartbeat(sid, (event: HeartbeatEvent) => {
-        syncManager.updateHeartbeat();
-        syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'heartbeat');
-      });
-
-      // 4. Periodic full state sync (checkpoint, every 5s)
-      webSocketService.subscribeToPeriodicSync(sid, (state: GameStateUpdate) => {
-        console.log('📍 Periodic checkpoint received');
+      // Subscribe to full state after each action
+      webSocketService.subscribeToGameState(sid, (state: GameStateUpdate) => {
+        console.log('📦 Full game state received, updating...');
         setGameState(state);
-        window.dispatchEvent(new CustomEvent('periodic-sync', { detail: state }));
+        // Dispatch to GameScene for rendering with dirty-checking
+        window.dispatchEvent(new CustomEvent('game-state-update', { detail: state }));
       });
 
       // ========================================================================

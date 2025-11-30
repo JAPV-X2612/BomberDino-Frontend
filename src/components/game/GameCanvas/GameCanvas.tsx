@@ -87,35 +87,20 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
   }, [onBombExploded, onPlayerKilled]);
 
   // ============================================================================
-  // NEW: Listen to event-driven updates from window events
+  // CRITICAL: Listen to full game state updates (ensures synchronization)
   // ============================================================================
   useEffect(() => {
-    const handlePlayerMoved = (event: CustomEvent<PlayerMovedEvent>) => {
+    const handleGameStateUpdate = (event: CustomEvent<GameStateUpdate>) => {
       if (sceneRef.current?.scene.isActive()) {
-        sceneRef.current.handlePlayerMovedEvent(event.detail);
+        console.log('📦 Applying full game state with dirty-checking');
+        sceneRef.current.updateGameState(event.detail);
       }
     };
 
-    const handleBombPlaced = (event: CustomEvent<BombPlacedEvent>) => {
-      if (sceneRef.current?.scene.isActive()) {
-        sceneRef.current.handleBombPlacedEvent(event.detail);
-      }
-    };
-
-    const handlePeriodicSync = (event: CustomEvent<GameStateUpdate>) => {
-      if (sceneRef.current?.scene.isActive()) {
-        sceneRef.current.handlePeriodicSync(event.detail);
-      }
-    };
-
-    window.addEventListener('player-moved', handlePlayerMoved as EventListener);
-    window.addEventListener('bomb-placed', handleBombPlaced as EventListener);
-    window.addEventListener('periodic-sync', handlePeriodicSync as EventListener);
+    window.addEventListener('game-state-update', handleGameStateUpdate as EventListener);
 
     return () => {
-      window.removeEventListener('player-moved', handlePlayerMoved as EventListener);
-      window.removeEventListener('bomb-placed', handleBombPlaced as EventListener);
-      window.removeEventListener('periodic-sync', handlePeriodicSync as EventListener);
+      window.removeEventListener('game-state-update', handleGameStateUpdate as EventListener);
     };
   }, []);
 
