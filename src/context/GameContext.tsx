@@ -80,11 +80,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const subscribeToSession = useCallback(
     (sid: string) => {
-      console.log('🔌 Subscribing to session with NEW event-driven architecture:', sid);
-
       // Configure syncManager resync callback
       syncManager.setResyncCallback((state) => {
-        console.log('🔄 SyncManager triggered resync, updating game state');
         setGameState(state);
         // Dispatch event for GameScene to handle
         window.dispatchEvent(new CustomEvent('force-resync', { detail: state }));
@@ -96,7 +93,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Subscribe to full state after each action
       webSocketService.subscribeToGameState(sid, (state: GameStateUpdate) => {
-        console.log('📦 Full game state received, updating...');
         setGameState(state);
         // Dispatch to GameScene for rendering with dirty-checking
         window.dispatchEvent(new CustomEvent('game-state-update', { detail: state }));

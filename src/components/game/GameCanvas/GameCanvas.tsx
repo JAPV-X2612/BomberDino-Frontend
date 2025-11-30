@@ -41,7 +41,6 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
 
         // Escuchar cuando la escena esté completamente lista
         scene.events.once('scene-ready', () => {
-          console.log('🎮 Scene ready event received, applying state');
           if (gameState) {
             scene.updateGameState(gameState);
           }
@@ -62,7 +61,6 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
     if (!sceneRef.current || !gameState) return;
 
     if (sceneRef.current.scene.isActive()) {
-      console.log('🔄 Updating game state');
       sceneRef.current.updateGameState(gameState);
     }
   }, [gameState]);
@@ -92,7 +90,6 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
   useEffect(() => {
     const handleGameStateUpdate = (event: CustomEvent<GameStateUpdate>) => {
       if (sceneRef.current?.scene.isActive()) {
-        console.log('📦 Applying full game state with dirty-checking');
         sceneRef.current.updateGameState(event.detail);
       }
     };

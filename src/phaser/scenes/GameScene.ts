@@ -42,8 +42,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   setSessionContext(_sessionId: string, _playerId: string): void {
-    console.log(_sessionId);
-    console.log(_playerId);
     this.localPlayerId = _playerId;
   }
 
@@ -56,12 +54,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateGameState(state: GameStateUpdate): void {
-    console.log('📦 Updating game state:', state);
-    console.log('📦 updateGameState CALLED at', new Date().toISOString());
-    // console.log('📦 State:', state);
-
     if (!this.sceneReady) {
-      console.warn('⚠️ Scene not ready yet, saving state for later');
       this.pendingState = state;
       return;
     }
@@ -77,26 +70,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   handleBombExploded(event: BombExplodedEvent): void {
-    console.log('💥 Bomb exploded:', event.bombId);
+    // Handle bomb explosion visual effects here if needed
   }
 
   public handlePlayerKilled(event: PlayerKilledEvent): void {
-    console.log('💀 PLAYER KILLED EVENT:', event);
-
     const player = this.players.get(event.victimId);
     if (player) {
-      console.log('💀 Player before takeDamage:', {
-        id: event.victimId,
-        lives: player.getLives(),
-        isAlive: player.isAlive(),
-      });
-
       player.takeDamage();
-
-      console.log('💀 Player after takeDamage:', {
-        lives: player.getLives(),
-        isAlive: player.isAlive(),
-      });
 
       window.dispatchEvent(
         new CustomEvent('player-damage', {
@@ -112,8 +92,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    console.log('GameScene: Create called');
-
     const boardWidth = this.BOARD_SIZE * this.CELL_SIZE;
     const boardHeight = this.BOARD_SIZE * this.CELL_SIZE;
 
@@ -129,27 +107,21 @@ export class GameScene extends Phaser.Scene {
     this.setupInput();
 
     this.sceneReady = true;
-    console.log('GameScene: Scene ready, applying pending state if any...');
 
     if (this.pendingState) {
-      console.log('✅ Applying pending state');
       const state = this.pendingState;
       this.pendingState = null;
       this.updateGameState(state);
     } else {
-      console.warn('⚠️ No pending state found');
       this.events.emit('scene-ready');
     }
   }
 
   private initializeBoardFromBackend(tiles: TileDTO[][]): void {
-    console.log('🎮 Initializing board from backend, size:', tiles.length);
-
     const height = tiles.length;
     const width = tiles[0]?.length || 0;
 
     if (!this.indestructibleBlocks || !this.blocks) {
-      console.warn('⚠️ Groups not initialized yet, skipping board initialization');
       return;
     }
 
@@ -187,7 +159,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    console.log('✅ Board initialized from backend');
     this.boardInitialized = true;
   }
 
@@ -221,26 +192,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePlayers(playersData: PlayerDTO[]): void {
-    console.log(
-      '🔍 Players from server:',
-      playersData.map((p) => p.id),
-    );
-    console.log('🔍 localPlayerId:', this.localPlayerId);
-    console.log(
-      '🔄 Updating players with data:',
-      playersData.map((p) => ({
-        id: p.id,
-        lifeCount: p.lifeCount,
-        deaths: p.deaths,
-        calculated: p.lifeCount - p.deaths,
-      })),
-    );
-
     playersData.forEach((playerData) => {
       let player = this.players.get(playerData.id);
 
       if (!player) {
-        console.log('🆕 Creating new player with data:', playerData);
         const colorMap = ['blue', 'green', 'orange', 'purple'];
         const color =
           this.playerColors.get(playerData.id) ||
@@ -259,20 +214,15 @@ export class GameScene extends Phaser.Scene {
 
         if (playerData.lifeCount !== undefined) {
           player.setLives(playerData.lifeCount - playerData.deaths);
-          console.log(
-            `✅ Set initial lives for ${playerData.id}: ${playerData.lifeCount - playerData.deaths}`,
-          );
         }
 
         this.players.set(playerData.id, player);
-        console.log('➕ Created player:', playerData.id);
       } else {
         // DIRTY-CHECKING: Only update if position actually changed
         const currentPos = player.getGridPosition();
         const hasPositionChanged = currentPos.x !== playerData.posX || currentPos.y !== playerData.posY;
 
         if (hasPositionChanged) {
-          console.log(`📍 Position changed for ${playerData.id}: (${currentPos.x},${currentPos.y}) → (${playerData.posX},${playerData.posY})`);
           player.moveToCell(playerData.posX, playerData.posY, this.BOARD_SIZE);
         }
 
@@ -280,7 +230,6 @@ export class GameScene extends Phaser.Scene {
         const currentLives = player.getLives();
         const newLives = playerData.lifeCount - playerData.deaths;
         if (currentLives !== newLives) {
-          console.log(`💗 Lives changed for ${playerData.id}: ${currentLives} → ${newLives}`);
           player.setLives(newLives);
         }
       }
@@ -295,35 +244,27 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    console.log('=== CHECKING FOR WINNER ===');
-
     const alivePlayers = Array.from(this.players.values()).filter((p) => {
-      const lives = p.getLives(); // Usar getLives() directamente
-      console.log(`Player ${p.getPlayerId()} lives:`, lives);
-      return lives > 0;
+      return p.getLives() > 0;
     });
-
-    console.log('🔍 Alive players count:', alivePlayers.length);
 
     if (alivePlayers.length === 1 && this.players.size > 1) {
       const winner = alivePlayers[0];
-      console.log('🏆 Winner:', winner.getPlayerId());
 
       // Mark game as ended to prevent duplicate winner checks
       this.gameEnded = true;
 
       // Obtener el color del sprite del ganador
       const winnerSprite = winner.getSprite();
-      const colorFromTexture = winnerSprite.texture.key; // Ej: 'player-blue'
+      const colorFromTexture = winnerSprite.texture.key;
 
       this.time.delayedCall(2000, () => {
         this.scene.start('GameOverScene', {
           winner: winner.getPlayerId(),
-          winnerColor: colorFromTexture, // ⬅️ Pasar el color
+          winnerColor: colorFromTexture,
         });
       });
     }
-    console.log('=== END CHECK ===');
   }
 
   private updateBombs(bombsData: BombDTO[]): void {
@@ -486,7 +427,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleMoveInput(dx: number, dy: number): void {
-    console.log('🎹 Key pressed:', dx, dy);
     const currentTime = this.time.now;
 
     if (currentTime - this.lastMoveTime < this.MOVE_COOLDOWN) {
@@ -502,38 +442,22 @@ export class GameScene extends Phaser.Scene {
 
     const direction = directionMap[`${dx},${dy}`];
 
-    console.log('📍 Direction:', direction);
-    console.log('🎮 gameActions:', this.gameActions);
-
     if (direction && this.gameActions?.sendMove) {
-      console.log('✅ Calling sendMove');
-
       this.gameActions.sendMove(direction);
       this.lastMoveTime = currentTime;
-    } else {
-      console.log('❌ Cannot send move');
     }
   }
 
   private handlePlaceBomb(): void {
-    console.log('🎯 handlePlaceBomb called');
-    console.log('🎯 localPlayerId:', this.localPlayerId);
-    console.log('🎯 players in map:', Array.from(this.players.keys()));
-
     if (!this.localPlayerId) {
-      console.error('❌ No localPlayerId set');
       return;
     }
 
     const localPlayer = this.players.get(this.localPlayerId);
-    console.log('🎯 localPlayer found:', localPlayer);
 
     if (localPlayer && this.gameActions?.placeBomb) {
       const pos = localPlayer.getGridPosition();
-      console.log('🎯 Placing bomb at:', pos);
       this.gameActions.placeBomb({ x: pos.x, y: pos.y });
-    } else {
-      console.error('❌ Cannot place bomb. Player or action missing');
     }
   }
 
@@ -546,16 +470,11 @@ export class GameScene extends Phaser.Scene {
    * Only updates the specific player that moved (not all players).
    */
   handlePlayerMovedEvent(event: PlayerMovedEvent): void {
-    console.log('📍 Player moved event:', event);
-
     const player = this.players.get(event.playerId);
 
     if (player) {
       // Only update THIS player's position
       player.moveToCell(event.newX, event.newY, this.BOARD_SIZE);
-    } else {
-      // Player doesn't exist locally - might be desync
-      console.warn('⚠️ Unknown player moved:', event.playerId);
     }
   }
 
@@ -564,8 +483,6 @@ export class GameScene extends Phaser.Scene {
    * Only creates the specific bomb that was placed (not updating entire bomb list).
    */
   handleBombPlacedEvent(event: BombPlacedEvent): void {
-    console.log('💣 Bomb placed event:', event);
-
     // Check if bomb already exists (prevent duplicates)
     const existingBomb = this.bombs.getChildren().find((b) => {
       const container = b as Phaser.GameObjects.Container;
@@ -582,8 +499,6 @@ export class GameScene extends Phaser.Scene {
         range: event.range,
         timeToExplode: event.timeToExplode,
       });
-    } else {
-      console.warn('⚠️ Bomb already exists:', event.bombId);
     }
   }
 
@@ -592,7 +507,6 @@ export class GameScene extends Phaser.Scene {
    * Replaces entire game state to prevent drift.
    */
   handlePeriodicSync(state: GameStateUpdate): void {
-    console.log('🔄 Periodic checkpoint received');
     // Use the existing updateGameState method for full sync
     this.updateGameState(state);
   }
