@@ -80,7 +80,7 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
   }, [onBombExploded, onPlayerKilled]);
 
   // ============================================================================
-  // EVENT-DRIVEN: Listen to specific lightweight events (PERFORMANCE!)
+  // HYBRID: Lightweight events for actions + full state for critical events
   // ============================================================================
   useEffect(() => {
     const handlePlayerMoved = (event: CustomEvent<PlayerMovedEvent>) => {
@@ -95,6 +95,12 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
       }
     };
 
+    const handleGameStateUpdate = (event: CustomEvent<GameStateUpdate>) => {
+      if (sceneRef.current?.scene.isActive()) {
+        sceneRef.current.updateGameState(event.detail);
+      }
+    };
+
     const handlePeriodicSync = (event: CustomEvent<GameStateUpdate>) => {
       if (sceneRef.current?.scene.isActive()) {
         sceneRef.current.handlePeriodicSync(event.detail);
@@ -103,11 +109,13 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
 
     window.addEventListener('player-moved', handlePlayerMoved as EventListener);
     window.addEventListener('bomb-placed', handleBombPlaced as EventListener);
+    window.addEventListener('game-state-update', handleGameStateUpdate as EventListener);
     window.addEventListener('periodic-sync', handlePeriodicSync as EventListener);
 
     return () => {
       window.removeEventListener('player-moved', handlePlayerMoved as EventListener);
       window.removeEventListener('bomb-placed', handleBombPlaced as EventListener);
+      window.removeEventListener('game-state-update', handleGameStateUpdate as EventListener);
       window.removeEventListener('periodic-sync', handlePeriodicSync as EventListener);
     };
   }, []);

@@ -87,30 +87,36 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       // ========================================================================
-      // EVENT-DRIVEN: Subscribe to lightweight specific events (PERFORMANCE!)
+      // HYBRID: Lightweight events for player actions + full state for critical events
       // ========================================================================
 
-      // 1. Player movement events (~100 bytes instead of ~5KB)
+      // 1. Player movement events (~100 bytes) - NO parpadeo
       webSocketService.subscribeToPlayerMoved(sid, (event: PlayerMovedEvent) => {
         if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'player-moved')) {
           window.dispatchEvent(new CustomEvent('player-moved', { detail: event }));
         }
       });
 
-      // 2. Bomb placement events (~150 bytes instead of ~5KB)
+      // 2. Bomb placement events (~150 bytes) - NO parpadeo
       webSocketService.subscribeToBombPlaced(sid, (event: BombPlacedEvent) => {
         if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'bomb-placed')) {
           window.dispatchEvent(new CustomEvent('bomb-placed', { detail: event }));
         }
       });
 
-      // 3. Heartbeat (keep-alive, every 500ms)
+      // 3. Full state for explosions, deaths, etc. - Sincronización perfecta
+      webSocketService.subscribeToGameState(sid, (state: GameStateUpdate) => {
+        setGameState(state);
+        window.dispatchEvent(new CustomEvent('game-state-update', { detail: state }));
+      });
+
+      // 4. Heartbeat (keep-alive, every 500ms)
       webSocketService.subscribeToHeartbeat(sid, (event: HeartbeatEvent) => {
         syncManager.updateHeartbeat();
         syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'heartbeat');
       });
 
-      // 4. Periodic full sync (checkpoint every 5s to prevent drift)
+      // 5. Periodic full sync (checkpoint every 5s to prevent drift)
       webSocketService.subscribeToPeriodicSync(sid, (state: GameStateUpdate) => {
         setGameState(state);
         window.dispatchEvent(new CustomEvent('periodic-sync', { detail: state }));
