@@ -53,24 +53,124 @@ export class GameScene extends Phaser.Scene {
     this.gameActions = actions;
   }
 
-  updateGameState(state: GameStateUpdate): void {
+  updateGameState(
+    state: GameStateUpdate,
+    source: 'periodic' | 'event' | 'initial' = 'event',
+  ): void {
     if (!this.sceneReady) {
       this.pendingState = state;
       return;
     }
 
-    if (!this.boardInitialized && state.tiles) {
+    console.log(`📊 updateGameState from ${source}`);
+
+    // ✅ Inicializar tablero la primera vez
+    if (state.tiles && !this.boardInitialized) {
+      console.log('🎨 Initializing board from backend tiles');
       this.initializeBoardFromBackend(state.tiles);
-      this.boardInitialized = true;
     }
 
+    // Always update players and powerups
     if (state.players) this.updatePlayers(state.players);
-    if (state.bombs) this.updateBombs(state.bombs);
     if (state.powerUps) this.updatePowerUps(state.powerUps);
+
+    // ✅ Actualizar bombas SOLO si NO es periodic sync
+    // Esto permite carga inicial + eventos normales, pero bloquea periodic sync
+    if (state.bombs && source !== 'periodic') {
+      console.log(`🔄 Updating bombs (source: ${source})`);
+      this.updateBombs(state.bombs);
+    }
   }
 
-  handleBombExploded(event: BombExplodedEvent): void {
-    // Handle bomb explosion visual effects here if needed
+  public handleBombExploded(event: BombExplodedEvent): void {
+    console.log(`💥 Bomb ${event.bombId} exploded, affected ${event.affectedTiles.length} tiles`);
+
+    const bombToRemove = this.bombs.getChildren().find((b) => {
+      const container = b as Phaser.GameObjects.Container;
+      return container.getData('bombId') === event.bombId;
+    });
+
+    if (bombToRemove) {
+      console.log(`🗑️ Removing exploded bomb ${event.bombId}`);
+      bombToRemove.destroy();
+    }
+
+    // Crear explosiones visuales MÁS GRANDES y MÁS LENTAS
+    event.affectedTiles.forEach((tile, index) => {
+      const x = tile.x * this.CELL_SIZE + this.CELL_SIZE / 2;
+      const y = tile.y * this.CELL_SIZE + this.CELL_SIZE / 2;
+
+      // Explosión principal (círculo grande naranja)
+      const explosionMain = this.add.circle(x, y, this.CELL_SIZE * 0.4, 0xff6600, 1);
+      explosionMain.setDepth(200); // Por encima de TODO
+
+      // Círculo exterior (más grande, amarillo)
+      const explosionOuter = this.add.circle(x, y, this.CELL_SIZE * 0.3, 0xffaa00, 0.8);
+      explosionOuter.setDepth(199);
+
+      // Partículas de fuego
+      const particles = [];
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const distance = this.CELL_SIZE * 0.3;
+        const px = x + Math.cos(angle) * distance;
+        const py = y + Math.sin(angle) * distance;
+
+        const particle = this.add.circle(px, py, 4, 0xff0000, 0.8);
+        particle.setDepth(198);
+        particles.push(particle);
+      }
+
+      // Animación de expansión (MÁS LENTA para que se vea)
+      this.tweens.add({
+        targets: explosionMain,
+        scale: { from: 0.3, to: 2.5 },
+        alpha: { from: 1, to: 0 },
+        duration: 800, // ← MÁS LENTO (era 500ms)
+        delay: index * 50, // Efecto dominó
+        onComplete: () => {
+          explosionMain.destroy();
+        },
+      });
+
+      this.tweens.add({
+        targets: explosionOuter,
+        scale: { from: 0.5, to: 3 },
+        alpha: { from: 0.8, to: 0 },
+        duration: 800,
+        delay: index * 50,
+        onComplete: () => {
+          explosionOuter.destroy();
+        },
+      });
+
+      // Animar partículas
+      particles.forEach((particle, i) => {
+        const angle = (i / particles.length) * Math.PI * 2;
+        const distance = this.CELL_SIZE * 1.5;
+
+        this.tweens.add({
+          targets: particle,
+          x: x + Math.cos(angle) * distance,
+          y: y + Math.sin(angle) * distance,
+          alpha: { from: 0.8, to: 0 },
+          scale: { from: 1, to: 0.2 },
+          duration: 600,
+          delay: index * 50,
+          onComplete: () => {
+            particle.destroy();
+          },
+        });
+      });
+
+      // Shake de cámara para el impacto
+      if (index === 0) {
+        // Solo en la primera explosión
+        this.cameras.main.shake(300, 0.01);
+      }
+    });
+
+    this.checkForWinner();
   }
 
   public handlePlayerKilled(event: PlayerKilledEvent): void {
@@ -220,7 +320,8 @@ export class GameScene extends Phaser.Scene {
       } else {
         // DIRTY-CHECKING: Only update if position actually changed
         const currentPos = player.getGridPosition();
-        const hasPositionChanged = currentPos.x !== playerData.posX || currentPos.y !== playerData.posY;
+        const hasPositionChanged =
+          currentPos.x !== playerData.posX || currentPos.y !== playerData.posY;
 
         if (hasPositionChanged) {
           player.moveToCell(playerData.posX, playerData.posY, this.BOARD_SIZE);
@@ -267,74 +368,105 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private updateBombs(bombsData: BombDTO[]): void {
-    if (!this.bombs) return; // Validar grupo existe
+  private updateBombs(bombs: BombDTO[]): void {
+    console.log(`🔄 updateBombs called with ${bombs.length} bombs from server`);
+    console.log(`🔄 Current visual bombs: ${this.bombs.getChildren().length}`);
 
-    const currentBombIds = new Set(bombsData.map((b) => b.id));
-
-    this.bombs.getChildren().forEach((bomb) => {
-      const container = bomb as Phaser.GameObjects.Container;
-      const bombId = container.getData('bombId') as string | undefined;
-      if (bombId && !currentBombIds.has(bombId)) {
-        bomb.destroy();
-      }
-    });
-
-    bombsData.forEach((bombData) => {
-      const existingBomb = this.bombs.getChildren().find((b) => {
+    // Get current bomb IDs
+    const currentBombIds = new Set(
+      this.bombs.getChildren().map((b) => {
         const container = b as Phaser.GameObjects.Container;
-        return container.getData('bombId') === bombData.id;
-      });
+        return container.getData('bombId');
+      }),
+    );
 
-      if (!existingBomb) {
-        this.createBombVisual(bombData);
+    const newBombIds = new Set(bombs.map((b) => b.id));
+
+    // 1. Remove bombs that no longer exist in server state
+    this.bombs.getChildren().forEach((visualBomb) => {
+      const container = visualBomb as Phaser.GameObjects.Container;
+      const bombId = container.getData('bombId');
+
+      if (!newBombIds.has(bombId)) {
+        console.log(`🗑️ Removing bomb ${bombId} (no longer in server state)`);
+        container.destroy();
       }
     });
+
+    // 2. Add NEW bombs that don't exist visually yet
+    bombs.forEach((bombData) => {
+      if (!currentBombIds.has(bombData.id)) {
+        console.log(`➕ Adding new bomb ${bombData.id} from server state`);
+        this.createBombVisual(bombData);
+      } else {
+        // Bomb already exists, optionally update position if needed
+        console.log(`✓ Bomb ${bombData.id} already exists, keeping it`);
+      }
+    });
+
+    console.log(`✅ updateBombs completed, total visual bombs: ${this.bombs.getChildren().length}`);
   }
 
   private createBombVisual(bombData: BombDTO): void {
     const bombX = bombData.posX * this.CELL_SIZE + this.CELL_SIZE / 2;
     const bombY = bombData.posY * this.CELL_SIZE + this.CELL_SIZE / 2;
 
+    console.log(
+      `🎨 Creating bomb at (${bombX}, ${bombY}), grid (${bombData.posX}, ${bombData.posY})`,
+    );
+
     const bomb = this.add.container(bombX, bombY);
     bomb.setData('bombId', bombData.id);
     bomb.setData('gridX', bombData.posX);
     bomb.setData('gridY', bombData.posY);
 
-    const eggBody = this.add.ellipse(0, 0, this.CELL_SIZE * 0.6, this.CELL_SIZE * 0.75, 0xffe4b5);
+    // Huevo (más grande y más visible)
+    const eggBody = this.add.ellipse(0, 0, this.CELL_SIZE * 0.7, this.CELL_SIZE * 0.85, 0xffe4b5);
     const eggShine = this.add.ellipse(
-      -5,
       -8,
-      this.CELL_SIZE * 0.2,
+      -12,
       this.CELL_SIZE * 0.25,
+      this.CELL_SIZE * 0.3,
       0xffffff,
-      0.6,
+      0.7,
     );
-    const spot1 = this.add.circle(4, -5, this.CELL_SIZE * 0.08, 0xd2691e, 0.5);
-    const spot2 = this.add.circle(-6, 3, this.CELL_SIZE * 0.06, 0xd2691e, 0.5);
-    const fuse = this.add.rectangle(0, -this.CELL_SIZE * 0.45, 2, this.CELL_SIZE * 0.2, 0x8b4513);
-    const spark = this.add.circle(0, -this.CELL_SIZE * 0.5, 3, 0xff4500);
 
-    bomb.add([eggBody, eggShine, spot1, spot2, fuse, spark]);
-    bomb.setDepth(35);
+    // Manchas más visibles
+    const spot1 = this.add.circle(6, -8, this.CELL_SIZE * 0.12, 0xd2691e, 0.8);
+    const spot2 = this.add.circle(-8, 5, this.CELL_SIZE * 0.09, 0xd2691e, 0.8);
+    const spot3 = this.add.circle(2, 8, this.CELL_SIZE * 0.07, 0xd2691e, 0.7);
+
+    // Mecha más visible
+    const fuse = this.add.rectangle(0, -this.CELL_SIZE * 0.5, 4, this.CELL_SIZE * 0.25, 0x8b4513);
+    const spark = this.add.circle(0, -this.CELL_SIZE * 0.6, 5, 0xff4500);
+
+    bomb.add([eggBody, eggShine, spot1, spot2, spot3, fuse, spark]);
+
+    // ✅ DEPTH MUY ALTO para que esté por encima de TODO
+    bomb.setDepth(150);
+
     this.bombs.add(bomb);
 
+    // Animación de la chispa (más visible)
     this.tweens.add({
       targets: spark,
-      alpha: { from: 1, to: 0.3 },
-      scale: { from: 1, to: 1.3 },
-      duration: 300,
+      alpha: { from: 1, to: 0.2 },
+      scale: { from: 1, to: 1.5 },
+      duration: 250,
       yoyo: true,
       repeat: -1,
     });
 
+    // Animación de balanceo del huevo
     this.tweens.add({
       targets: bomb,
-      angle: { from: -5, to: 5 },
-      duration: 200,
+      angle: { from: -8, to: 8 },
+      duration: 180,
       yoyo: true,
       repeat: -1,
     });
+
+    console.log(`✅ Bomb visual created with depth 150`);
   }
 
   private updatePowerUps(powerUpsData: PowerUpDTO[]): void {
@@ -483,23 +615,30 @@ export class GameScene extends Phaser.Scene {
    * Only creates the specific bomb that was placed (not updating entire bomb list).
    */
   handleBombPlacedEvent(event: BombPlacedEvent): void {
-    // Check if bomb already exists (prevent duplicates)
+    console.log(`💣 Bomb placed event: ${event.bombId} at (${event.x}, ${event.y})`);
+
+    // Check if bomb already exists
     const existingBomb = this.bombs.getChildren().find((b) => {
       const container = b as Phaser.GameObjects.Container;
       return container.getData('bombId') === event.bombId;
     });
 
-    if (!existingBomb) {
-      // Create ONLY this new bomb
-      this.createBombVisual({
-        id: event.bombId,
-        ownerId: event.playerId,
-        posX: event.x,
-        posY: event.y,
-        range: event.range,
-        timeToExplode: event.timeToExplode,
-      });
+    if (existingBomb) {
+      console.log(`⚠️ Bomb ${event.bombId} already exists, skipping`);
+      return;
     }
+
+    // Create the bomb
+    this.createBombVisual({
+      id: event.bombId,
+      ownerId: event.playerId,
+      posX: event.x,
+      posY: event.y,
+      range: event.range,
+      timeToExplode: event.timeToExplode,
+    });
+
+    console.log(`✅ Bomb ${event.bombId} created, total bombs: ${this.bombs.getChildren().length}`);
   }
 
   /**
@@ -507,8 +646,49 @@ export class GameScene extends Phaser.Scene {
    * Replaces entire game state to prevent drift.
    */
   handlePeriodicSync(state: GameStateUpdate): void {
-    // Use the existing updateGameState method for full sync
-    this.updateGameState(state);
+    console.log('🔄 Periodic sync received');
+
+    // Update players and powerups normally
+    if (state.players) {
+      this.updatePlayers(state.players);
+    }
+
+    if (state.powerUps) {
+      this.updatePowerUps(state.powerUps);
+    }
+
+    // ✅ Para bombas: Solo AGREGAR bombas nuevas, nunca ELIMINAR
+    if (state.bombs) {
+      this.syncBombsAddOnly(state.bombs);
+    }
+  }
+
+  /**
+   * Syncs bombs by only ADDING missing bombs, never removing existing ones.
+   * Used for periodic sync to prevent removing bombs that were just placed.
+   */
+  private syncBombsAddOnly(bombs: BombDTO[]): void {
+    console.log(`🔄 syncBombsAddOnly called with ${bombs.length} bombs from server`);
+
+    const currentBombIds = new Set(
+      this.bombs.getChildren().map((b) => {
+        const container = b as Phaser.GameObjects.Container;
+        return container.getData('bombId');
+      }),
+    );
+
+    // Only ADD bombs that don't exist visually yet
+    // Never remove bombs (they'll be removed by explosion events)
+    bombs.forEach((bombData) => {
+      if (!currentBombIds.has(bombData.id)) {
+        console.log(`➕ Adding missing bomb ${bombData.id} from periodic sync`);
+        this.createBombVisual(bombData);
+      }
+    });
+
+    console.log(
+      `✅ syncBombsAddOnly completed, total visual bombs: ${this.bombs.getChildren().length}`,
+    );
   }
 
   update(): void {

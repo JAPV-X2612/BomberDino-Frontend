@@ -2,173 +2,169 @@ import { gameApiService } from '@/services/game-api.service';
 import type { GameStateUpdate } from '@/types/websocket-types';
 
 /**
- * Manages client-server synchronization for real-time game state.
- * Detects packet loss, connection issues, and triggers resynchronization when needed.
+ * SYNC MANAGER - Client-side synchronization controller
  *
- * Features:
- * - Sequence number tracking to detect lost packets
- * - Heartbeat monitoring to detect connection loss
- * - Automatic resync requests with throttling
- * - Manual resync capability
+ * Responsibilities:
+ * 1. Track sequence numbers to detect lost messages
+ * 2. Monitor heartbeat to detect connection issues
+ * 3. Trigger automatic resynchronization when needed
+ * 4. Prevent duplicate sequence numbers
  *
- * @author Claude AI Assistant
- * @version 2.0
- * @since 2025-11-26
+ * Part of the HYBRID ARCHITECTURE for eliminating flicker while maintaining sync.
  */
-export class SyncManager {
-  private lastSequenceNumbers: Map<string, number> = new Map();
-  private lastHeartbeat: number = Date.now();
-  private readonly HEARTBEAT_TIMEOUT = 2000; // 2 seconds
-  private readonly SYNC_REQUEST_COOLDOWN = 5000; // 5 seconds
-  private lastSyncRequest: number = 0;
-  private resyncCallback?: (state: GameStateUpdate) => void;
+class SyncManager {
+  // Track last sequence number per event type
+  private lastSequenceNumbers: Map<string, Map<string, number>> = new Map();
+
+  // Track last heartbeat timestamp
+  private lastHeartbeat: Map<string, number> = new Map();
+
+  // Callback to trigger resync
+  private resyncCallback: ((state: GameStateUpdate) => void) | null = null;
+
+  // Resync in progress flag
+  private resyncInProgress: Set<string> = new Set();
 
   /**
-   * Sets the callback to be called when a resync is completed.
+   * Sets the callback function to execute when resync is needed.
+   * This will fetch full state and update the game.
    */
   setResyncCallback(callback: (state: GameStateUpdate) => void): void {
     this.resyncCallback = callback;
   }
 
   /**
-   * Checks sequence number continuity to detect lost packets.
-   * If packets are missing, triggers automatic resynchronization.
+   * Checks if a sequence number is valid and updates tracking.
    *
-   * @param sessionId Game session identifier
-   * @param seqNum Sequence number from server event
-   * @param eventType Type of event (for logging)
-   * @returns true if sequence is valid, false if packets were lost
+   * @param sessionId - Current game session ID
+   * @param sequenceNumber - Sequence number from server message
+   * @param eventType - Type of event (player-moved, bomb-placed, heartbeat)
+   * @returns true if sequence is valid, false if missed messages detected
    */
-  checkSequenceNumber(sessionId: string, seqNum: number, eventType: string = 'unknown'): boolean {
-    const lastSeq = this.lastSequenceNumbers.get(sessionId) || 0;
-
-    // First message or valid sequence
-    if (lastSeq === 0 || seqNum === lastSeq + 1) {
-      this.lastSequenceNumbers.set(sessionId, seqNum);
-      return true;
+  checkSequenceNumber(sessionId: string, sequenceNumber: number, eventType: string): boolean {
+    if (!this.lastSequenceNumbers.has(sessionId)) {
+      this.lastSequenceNumbers.set(sessionId, new Map());
     }
 
-    // Sequence gap detected - packet loss!
-    if (seqNum > lastSeq + 1) {
-      const lostPackets = seqNum - lastSeq - 1;
+    const sessionSeq = this.lastSequenceNumbers.get(sessionId)!;
+    const lastSeq = sessionSeq.get(eventType) || 0;
+
+    // Check for gaps (missed messages)
+    if (sequenceNumber > lastSeq + 1 && lastSeq !== 0) {
+      const missedCount = sequenceNumber - lastSeq - 1;
       console.warn(
-        `⚠️ Packet loss detected! Expected seq ${lastSeq + 1}, got ${seqNum} (${lostPackets} packets lost)`,
-        `Event type: ${eventType}`,
+        `⚠️ Missed ${missedCount} ${eventType} messages (last: ${lastSeq}, current: ${sequenceNumber})`,
       );
-      this.requestResync(sessionId, `packet_loss_${eventType}`);
-      this.lastSequenceNumbers.set(sessionId, seqNum);
-      return false;
+
+      // Trigger resync if too many missed messages
+      if (missedCount > 5) {
+        console.error(`❌ Too many missed messages, triggering resync...`);
+        this.triggerResync(sessionId);
+        return false;
+      }
     }
 
-    // Duplicate or out-of-order packet (ignore)
-    if (seqNum <= lastSeq) {
-      console.warn(`⚠️ Duplicate/old packet: seq ${seqNum} (current: ${lastSeq})`);
-      return false;
+    // Check for duplicate/out-of-order
+    if (sequenceNumber <= lastSeq) {
+      console.warn(
+        `⚠️ Duplicate or out-of-order ${eventType} (last: ${lastSeq}, current: ${sequenceNumber})`,
+      );
+      return false; // Ignore duplicate
     }
 
+    // Update tracking
+    sessionSeq.set(eventType, sequenceNumber);
     return true;
   }
 
   /**
-   * Updates the last heartbeat timestamp.
-   * Call this when receiving heartbeat events from the server.
+   * Updates heartbeat timestamp for connection monitoring.
    */
   updateHeartbeat(): void {
-    this.lastHeartbeat = Date.now();
-  }
-
-  /**
-   * Checks if the server heartbeat has timed out.
-   * Should be called periodically (e.g., every second) to detect connection loss.
-   *
-   * @param sessionId Game session identifier
-   */
-  checkHeartbeat(sessionId: string): void {
-    const now = Date.now();
-
-    if (now - this.lastHeartbeat > this.HEARTBEAT_TIMEOUT) {
-      console.error('❌ Server heartbeat timeout! Connection may be lost.');
-      this.requestResync(sessionId, 'heartbeat_timeout');
+    const sessionId = Array.from(this.lastSequenceNumbers.keys())[0];
+    if (sessionId) {
+      this.lastHeartbeat.set(sessionId, Date.now());
     }
   }
 
   /**
-   * Manually requests a full state resynchronization from the server.
-   * Use this when you detect desynchronization issues.
+   * Checks if heartbeat is recent enough (connection alive).
+   * Triggers resync if connection seems lost.
    *
-   * @param sessionId Game session identifier
+   * @param sessionId - Current game session ID
    */
-  requestManualResync(sessionId: string): void {
-    console.log('🔄 Manual resync requested by user');
-    this.requestResync(sessionId, 'manual', true);
+  checkHeartbeat(sessionId: string): void {
+    const lastBeat = this.lastHeartbeat.get(sessionId);
+
+    if (!lastBeat) return; // No heartbeat received yet
+
+    const timeSinceLastBeat = Date.now() - lastBeat;
+    const HEARTBEAT_TIMEOUT = 2000; // 2 seconds (server sends every 500ms)
+
+    if (timeSinceLastBeat > HEARTBEAT_TIMEOUT) {
+      console.warn(`⚠️ No heartbeat for ${timeSinceLastBeat}ms, connection may be lost`);
+
+      // Trigger resync after 3 seconds of no heartbeat
+      if (timeSinceLastBeat > 3000) {
+        console.error(`❌ Heartbeat timeout, triggering resync...`);
+        this.triggerResync(sessionId);
+      }
+    }
   }
 
   /**
-   * Internal method to request resynchronization with throttling.
+   * Triggers manual resynchronization by fetching full game state.
    *
-   * @param sessionId Game session identifier
-   * @param reason Reason for resync (for logging)
-   * @param force Force resync even if cooldown hasn't passed
+   * @param sessionId - Current game session ID
    */
-  private requestResync(sessionId: string, reason: string, force: boolean = false): void {
-    const now = Date.now();
-
-    // Throttle: no more than 1 request every 5 seconds (unless forced)
-    if (!force && now - this.lastSyncRequest < this.SYNC_REQUEST_COOLDOWN) {
-      console.log(
-        `⏱️ Resync throttled (last request ${Math.floor((now - this.lastSyncRequest) / 1000)}s ago)`,
-      );
+  async triggerResync(sessionId: string): Promise<void> {
+    // Prevent multiple simultaneous resyncs
+    if (this.resyncInProgress.has(sessionId)) {
+      console.log(`🔄 Resync already in progress for session ${sessionId}`);
       return;
     }
 
-    console.log(`🔄 Requesting full state resync (reason: ${reason})...`);
-    this.lastSyncRequest = now;
+    this.resyncInProgress.add(sessionId);
 
-    // Request full state from backend via REST API
-    gameApiService
-      .getFullGameState(sessionId)
-      .then((state) => {
-        console.log('✅ Resync successful', state);
+    try {
+      console.log(`🔄 Fetching full state for resync...`);
 
-        // Call the resync callback if set
-        if (this.resyncCallback) {
-          this.resyncCallback(state);
-        }
+      // Fetch full state from REST endpoint
+      const fullState = await gameApiService.getFullGameState(sessionId);
 
-        // Dispatch custom event for components listening
-        window.dispatchEvent(
-          new CustomEvent('force-resync', {
-            detail: state,
-          }),
-        );
-      })
-      .catch((error) => {
-        console.error('❌ Resync failed:', error);
-      });
+      // Apply full state via callback
+      if (this.resyncCallback && fullState) {
+        this.resyncCallback(fullState);
+        console.log(`✅ Resync completed successfully`);
+      }
+
+      // Reset sequence tracking after resync
+      this.resetSequenceTracking(sessionId);
+    } catch (error) {
+      console.error(`❌ Resync failed:`, error);
+    } finally {
+      this.resyncInProgress.delete(sessionId);
+    }
   }
 
   /**
-   * Resets all tracking for a session.
-   * Call this when leaving a game or when a game ends.
-   *
-   * @param sessionId Game session identifier
+   * Resets sequence tracking for a session (called after resync).
+   */
+  private resetSequenceTracking(sessionId: string): void {
+    const sessionSeq = this.lastSequenceNumbers.get(sessionId);
+    if (sessionSeq) {
+      sessionSeq.clear();
+    }
+  }
+
+  /**
+   * Resets all tracking for a session (called on disconnect).
    */
   resetSession(sessionId: string): void {
     this.lastSequenceNumbers.delete(sessionId);
-    this.lastHeartbeat = Date.now();
-    this.lastSyncRequest = 0;
-  }
-
-  /**
-   * Clears all tracking data.
-   * Call this when disconnecting completely.
-   */
-  clearAll(): void {
-    this.lastSequenceNumbers.clear();
-    this.lastHeartbeat = Date.now();
-    this.lastSyncRequest = 0;
+    this.lastHeartbeat.delete(sessionId);
+    this.resyncInProgress.delete(sessionId);
   }
 }
 
-// Singleton instance
 export const syncManager = new SyncManager();

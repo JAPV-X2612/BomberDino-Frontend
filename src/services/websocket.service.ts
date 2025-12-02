@@ -189,10 +189,7 @@ class WebSocketService {
   /**
    * Subscribe to power-up spawn events.
    */
-  subscribeToPowerUpSpawned(
-    sessionId: string,
-    handler: MessageHandler<PowerUpSpawnedEvent>,
-  ): void {
+  subscribeToPowerUpSpawned(sessionId: string, handler: MessageHandler<PowerUpSpawnedEvent>): void {
     this.subscribe(`/topic/game/${sessionId}/powerup-spawned`, handler);
   }
 

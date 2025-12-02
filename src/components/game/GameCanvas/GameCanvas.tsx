@@ -97,13 +97,13 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
 
     const handleGameStateUpdate = (event: CustomEvent<GameStateUpdate>) => {
       if (sceneRef.current?.scene.isActive()) {
-        sceneRef.current.updateGameState(event.detail);
+        sceneRef.current.updateGameState(event.detail, 'event');
       }
     };
 
     const handlePeriodicSync = (event: CustomEvent<GameStateUpdate>) => {
       if (sceneRef.current?.scene.isActive()) {
-        sceneRef.current.handlePeriodicSync(event.detail);
+        sceneRef.current.updateGameState(event.detail, 'periodic');
       }
     };
 
