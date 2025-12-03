@@ -58,6 +58,7 @@ const forceLogoutInvalidAccount = async (): Promise<void> => {
  * @returns AuthContextValue
  * @throws Error if used outside AuthProvider
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextValue => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -89,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 const response = await msalInstance.handleRedirectPromise();
                 if (response) {
+                    msalInstance.setActiveAccount(response.account || null);
                     const email = response.account?.username || '';
                     if (!isAllowedDomain(email)) {
                         setLoginError('Acceso restringido.\nSolo se permiten cuentas @escuelaing.edu.co, @mail.escuelaing.edu.co, @hotmail.com y @outlook.com');
@@ -97,8 +99,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
 
                     setUser(response.account);
-                    setAccessToken(response.accessToken);
-                    setIsAuthenticated(true);
+                    try {
+                        const tokenResponse = await msalInstance.acquireTokenSilent({
+                            ...apiRequest,
+                            account: response.account,
+                        });
+                        setAccessToken(tokenResponse.accessToken);
+                        setIsAuthenticated(true);
+                    } catch (error) {
+                        console.warn('Silent token after redirect failed, trying popup:', error);
+                        try {
+                            const popupResponse = await msalInstance.acquireTokenPopup({
+                                ...apiRequest,
+                                account: response.account,
+                            });
+                            setAccessToken(popupResponse.accessToken);
+                            setIsAuthenticated(true);
+                        } catch (popupError) {
+                            console.error('Token acquisition after redirect failed:', popupError);
+                            setAccessToken(null);
+                            setIsAuthenticated(false);
+                        }
+                    }
                 } else {
                     const accounts = msalInstance.getAllAccounts();
                     if (accounts.length > 0) {
@@ -109,17 +131,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             return;
                         }
 
+                        msalInstance.setActiveAccount(accounts[0]);
                         setUser(accounts[0]);
-                        setIsAuthenticated(true);
 
                         try {
                             const tokenResponse = await msalInstance.acquireTokenSilent({
-                                ...loginRequest,
+                                ...apiRequest,
                                 account: accounts[0],
                             });
                             setAccessToken(tokenResponse.accessToken);
+                            setIsAuthenticated(true);
                         } catch (error) {
-                            console.warn('Silent token acquisition failed:', error);
+                            console.warn('Silent token acquisition failed, trying popup:', error);
+                            try {
+                                const popupResponse = await msalInstance.acquireTokenPopup({
+                                    ...apiRequest,
+                                    account: accounts[0],
+                                });
+                                setAccessToken(popupResponse.accessToken);
+                                setIsAuthenticated(true);
+                            } catch (popupError) {
+                                console.error('Token acquisition failed:', popupError);
+                                setAccessToken(null);
+                                setIsAuthenticated(false);
+                            }
                         }
                     }
                 }
@@ -148,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
             }
 
+            msalInstance.setActiveAccount(loginResponse.account || null);
             let tokenResponse;
             try {
                 tokenResponse = await msalInstance.acquireTokenSilent({
@@ -215,6 +251,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return null;
         }
     }, [user]);
+
+    // Refresh token when backend rejects a request (401)
+    useEffect(() => {
+        const handleUnauthorized = async () => {
+            const token = await getAccessToken();
+            if (!token) {
+                setAccessToken(null);
+                setIsAuthenticated(false);
+            } else {
+                setIsAuthenticated(true);
+            }
+        };
+
+        window.addEventListener('auth:unauthorized', handleUnauthorized as EventListener);
+        return () => {
+            window.removeEventListener('auth:unauthorized', handleUnauthorized as EventListener);
+        };
+    }, [getAccessToken]);
 
     const value: AuthContextValue = {
         isAuthenticated,

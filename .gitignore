@@ -498,3 +498,4 @@ build/Release
 # *.mp4
 # *.mov
 # *.avi
+.env*.local

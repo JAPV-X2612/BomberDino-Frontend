@@ -23,7 +23,8 @@ export const msalConfig: Configuration = {
         navigateToLoginRequestUrl: true,
     },
     cache: {
-        cacheLocation: BrowserCacheLocation.SessionStorage,
+        // Use localStorage so access tokens and account info survive new tabs and refreshes
+        cacheLocation: BrowserCacheLocation.LocalStorage,
         storeAuthStateInCookie: true,
     },
 };
