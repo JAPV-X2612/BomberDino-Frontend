@@ -23,6 +23,9 @@ export class GameScene extends Phaser.Scene {
   private powerups!: Phaser.GameObjects.Group;
   private localPlayerId?: string;
   private playerColors: Map<string, string> = new Map();
+
+  private static persistentColors: Map<string, string> = new Map();
+
   private readonly CELL_SIZE = 56;
   private BOARD_SIZE = 13;
   private sceneReady = false;
@@ -314,14 +317,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePlayers(playersData: PlayerDTO[]): void {
+    if (this.playerColors.size === 0 && GameScene.persistentColors.size > 0) {
+      this.playerColors = new Map(GameScene.persistentColors);
+    }
+
+    console.log('🎨 Player colors:', Array.from(this.playerColors.entries()));
+
     const incomingPlayerIds = new Set(playersData.map((p) => p.id));
-    this.maxPlayersSeen = Math.max(this.maxPlayersSeen, Math.max(playersData.length, this.players.size));
+    this.maxPlayersSeen = Math.max(
+      this.maxPlayersSeen,
+      Math.max(playersData.length, this.players.size),
+    );
 
     // Remove visuals for players no longer reported by the server
     this.players.forEach((player, id) => {
       if (!incomingPlayerIds.has(id)) {
         player.hide();
-        this.players.delete(id);
+        // this.players.delete(id);
       }
     });
 
@@ -332,16 +344,19 @@ export class GameScene extends Phaser.Scene {
       let player = this.players.get(playerData.id);
 
       if (!player) {
-        if (isDead) {
-          return; // Do not create visuals for dead players
-        }
+        if (isDead) return;
 
         const colorMap = ['blue', 'green', 'orange', 'purple'];
-        const color =
-          this.playerColors.get(playerData.id) ||
-          colorMap[this.playerColors.size % colorMap.length];
 
-        this.playerColors.set(playerData.id, color);
+        // ✅ FIX: Buscar el primer color NO usado en lugar de usar size
+        let color = this.playerColors.get(playerData.id);
+
+        if (!color) {
+          const usedColors = new Set(this.playerColors.values());
+          color = colorMap.find((c) => !usedColors.has(c)) || colorMap[0];
+          this.playerColors.set(playerData.id, color);
+          GameScene.persistentColors.set(playerData.id, color); // ✅ Guardar
+        }
 
         player = new Player(
           this,
@@ -353,7 +368,6 @@ export class GameScene extends Phaser.Scene {
         );
 
         player.setLives(remainingLives);
-
         this.players.set(playerData.id, player);
       } else {
         if (isDead) {
@@ -364,7 +378,6 @@ export class GameScene extends Phaser.Scene {
 
         player.show();
 
-        // DIRTY-CHECKING: Only update if position actually changed
         const currentPos = player.getGridPosition();
         const hasPositionChanged =
           currentPos.x !== playerData.posX || currentPos.y !== playerData.posY;
@@ -373,7 +386,6 @@ export class GameScene extends Phaser.Scene {
           player.moveToCell(playerData.posX, playerData.posY, this.BOARD_SIZE);
         }
 
-        // DIRTY-CHECKING: Only update lives if changed
         const currentLives = player.getLives();
         if (currentLives !== remainingLives) {
           player.setLives(remainingLives);
@@ -483,7 +495,7 @@ export class GameScene extends Phaser.Scene {
       -12,
       this.CELL_SIZE * 0.25,
       this.CELL_SIZE * 0.3,
-      0xffffff,
+      0xff0000ff,
       0.7,
     );
 
