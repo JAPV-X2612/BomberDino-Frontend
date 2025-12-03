@@ -175,6 +175,7 @@ export class GameScene extends Phaser.Scene {
 
   public handlePlayerKilled(event: PlayerKilledEvent): void {
     const player = this.players.get(event.victimId);
+
     if (player) {
       player.takeDamage();
 
@@ -186,6 +187,25 @@ export class GameScene extends Phaser.Scene {
           },
         }),
       );
+
+      // Con animación de fade out
+      if (player.getLives() <= 0) {
+        console.log(`💀 Player ${event.victimId} died`);
+
+        const sprite = player.getSprite();
+
+        // Fade out animation
+        this.tweens.add({
+          targets: sprite,
+          alpha: 0,
+          scale: 0.5,
+          duration: 500,
+          ease: 'Power2',
+          onComplete: () => {
+            player.hide();
+          },
+        });
+      }
     }
 
     this.checkForWinner();
@@ -522,27 +542,6 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  // private updateTiles(tiles: TileDTO[][]): void {
-  //   if (!this.blocks) return;
-  //
-  //   this.blocks.getChildren().forEach((block) => {
-  //     const rect = block as Phaser.GameObjects.Rectangle;
-  //     const gridX = rect.getData('gridX') as number;
-  //     const gridY = rect.getData('gridY') as number;
-  //
-  //     const tile = tiles[gridY]?.[gridX];
-  //     if (!tile || tile.type !== 'DESTRUCTIBLE_WALL') {
-  //       this.tweens.add({
-  //         targets: block,
-  //         alpha: 0,
-  //         scale: 0,
-  //         duration: 200,
-  //         onComplete: () => block.destroy(),
-  //       });
-  //     }
-  //   });
-  // }
-
   private setupGroups(): void {
     this.bombs = this.add.group();
     this.powerups = this.add.group();
@@ -592,10 +591,6 @@ export class GameScene extends Phaser.Scene {
       this.gameActions.placeBomb({ x: pos.x, y: pos.y });
     }
   }
-
-  // ============================================================================
-  // NEW EVENT HANDLERS (Performance Optimization)
-  // ============================================================================
 
   /**
    * Handles individual player movement event.

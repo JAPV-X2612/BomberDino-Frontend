@@ -155,4 +155,14 @@ export class Player {
       this.sprite.y = this.targetY;
     }
   }
+
+  public hide(): void {
+    this.sprite.setVisible(false);
+    this.sprite.setActive(false);
+  }
+
+  public show(): void {
+    this.sprite.setVisible(true);
+    this.sprite.setActive(true);
+  }
 }
