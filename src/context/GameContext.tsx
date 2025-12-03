@@ -8,10 +8,14 @@ import type {
   BombExplodedEvent,
   PlayerKilledEvent,
   PowerUpCollectedEvent,
+  PlayerMovedEvent,
+  BombPlacedEvent,
+  HeartbeatEvent,
 } from '@/types/websocket-types';
 import type { GameRoomResponse } from '@/types/api-types';
 import { apiService } from '@/services/api.service';
 import { useAuth } from '@/context/AuthContext';
+import { syncManager } from '@/utils/SyncManager';
 
 interface GameContextValue {
   sessionId: string | null;
@@ -58,9 +62,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { accessToken } = useAuth();
 
   useEffect(() => {
-    if (accessToken) {
-      apiService.setAccessToken(accessToken);
-    }
+    apiService.setAccessToken(accessToken);
+    webSocketService.setAccessToken(accessToken);
   }, [accessToken]);
 
   useEffect(() => {
@@ -76,9 +79,51 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const subscribeToSession = useCallback(
     (sid: string) => {
-      webSocketService.subscribeToGameState(sid, (state) => {
+      // Configure syncManager resync callback
+      syncManager.setResyncCallback((state) => {
         setGameState(state);
+        window.dispatchEvent(new CustomEvent('force-resync', { detail: state }));
       });
+
+      // ========================================================================
+      // HYBRID: Lightweight events for player actions + full state for critical events
+      // ========================================================================
+
+      // 1. Player movement events (~100 bytes) - NO parpadeo
+      webSocketService.subscribeToPlayerMoved(sid, (event: PlayerMovedEvent) => {
+        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'player-moved')) {
+          window.dispatchEvent(new CustomEvent('player-moved', { detail: event }));
+        }
+      });
+
+      // 2. Bomb placement events (~150 bytes) - NO parpadeo
+      webSocketService.subscribeToBombPlaced(sid, (event: BombPlacedEvent) => {
+        if (syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'bomb-placed')) {
+          window.dispatchEvent(new CustomEvent('bomb-placed', { detail: event }));
+        }
+      });
+
+      // 3. Full state for explosions, deaths, etc. - Sincronización perfecta
+      webSocketService.subscribeToGameState(sid, (state: GameStateUpdate) => {
+        setGameState(state);
+        window.dispatchEvent(new CustomEvent('game-state-update', { detail: state }));
+      });
+
+      // 4. Heartbeat (keep-alive, every 500ms)
+      webSocketService.subscribeToHeartbeat(sid, (event: HeartbeatEvent) => {
+        syncManager.updateHeartbeat();
+        syncManager.checkSequenceNumber(sid, event.sequenceNumber, 'heartbeat');
+      });
+
+      // 5. Periodic full sync (checkpoint every 5s to prevent drift)
+      webSocketService.subscribeToPeriodicSync(sid, (state: GameStateUpdate) => {
+        setGameState(state);
+        window.dispatchEvent(new CustomEvent('periodic-sync', { detail: state }));
+      });
+
+      // ========================================================================
+      // EXISTING: Keep these for specific events
+      // ========================================================================
 
       webSocketService.subscribeToBombExploded(sid, (event) => {
         bombExplodedCallbacks.forEach((cb) => cb(event));
@@ -97,16 +142,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       webSocketService.subscribeToGameStart(sid, (notification) => {
-        console.log('Game starting!', notification);
+        console.log('🎮 Game starting!', notification);
         setGameState(notification.initialState);
         gameStartCallbacks.forEach((cb) => cb());
       });
 
-      webSocketService.subscribeToGameStart(sid, (notification) => {
-        console.log('🎮 Game starting!', notification); // Agregar
-        setGameState(notification.initialState);
-        gameStartCallbacks.forEach((cb) => cb());
-      });
+      // Periodically check heartbeat
+      const heartbeatInterval = setInterval(() => {
+        syncManager.checkHeartbeat(sid);
+      }, 1000); // Check every second
+
+      return () => {
+        clearInterval(heartbeatInterval);
+        syncManager.resetSession(sid);
+      };
     },
     [bombExplodedCallbacks, gameStartCallbacks, playerKilledCallbacks, powerUpCollectedCallbacks],
   );

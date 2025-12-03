@@ -5,6 +5,7 @@ import type {
   GameRoomResponse,
   GameStatus,
 } from '@/types/api-types';
+import type { GameStateUpdate } from '@/types/websocket-types';
 
 class GameApiService {
   private readonly basePath = '/game';
@@ -34,6 +35,20 @@ class GameApiService {
 
   async leaveRoom(sessionId: string, playerId: string): Promise<void> {
     await apiClient.delete(`${this.basePath}/rooms/${sessionId}/players/${playerId}`);
+  }
+
+  /**
+   * Requests full game state for manual resynchronization.
+   * Used when client detects desynchronization (packet loss, timeouts, etc.)
+   *
+   * @param sessionId Session identifier
+   * @returns Promise<GameStateUpdate> Complete game state
+   */
+  async getFullGameState(sessionId: string): Promise<GameStateUpdate> {
+    const response = await apiClient.get<GameStateUpdate>(
+      `${this.basePath}/rooms/${sessionId}/state`,
+    );
+    return response.data;
   }
 }
 

@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { gameConfig } from '@/phaser/game.config';
 import { GameScene } from '@/phaser/scenes/GameScene';
 import { useGame } from '@/context/GameContext';
+import type { PlayerMovedEvent, BombPlacedEvent, GameStateUpdate } from '@/types/websocket-types';
 import './GameCanvas.css';
 
 interface GameCanvasProps {
@@ -40,7 +41,6 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
 
         // Escuchar cuando la escena esté completamente lista
         scene.events.once('scene-ready', () => {
-          console.log('🎮 Scene ready event received, applying state');
           if (gameState) {
             scene.updateGameState(gameState);
           }
@@ -57,14 +57,8 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
     };
   }, [sessionId, playerId, sendMove, placeBomb, collectPowerUp, gameState]);
 
-  useEffect(() => {
-    if (!sceneRef.current || !gameState) return;
-
-    if (sceneRef.current.scene.isActive()) {
-      console.log('🔄 Updating game state');
-      sceneRef.current.updateGameState(gameState);
-    }
-  }, [gameState]);
+  // NOTE: Removed duplicate gameState listener - we only use the 'game-state-update' event
+  // to avoid calling updateGameState() twice per update
 
   useEffect(() => {
     const unsubscribeBombExploded = onBombExploded((event) => {
@@ -84,6 +78,47 @@ export const GameCanvas: FC<GameCanvasProps> = ({ sessionId, playerId }) => {
       unsubscribePlayerKilled();
     };
   }, [onBombExploded, onPlayerKilled]);
+
+  // ============================================================================
+  // HYBRID: Lightweight events for actions + full state for critical events
+  // ============================================================================
+  useEffect(() => {
+    const handlePlayerMoved = (event: CustomEvent<PlayerMovedEvent>) => {
+      if (sceneRef.current?.scene.isActive()) {
+        sceneRef.current.handlePlayerMovedEvent(event.detail);
+      }
+    };
+
+    const handleBombPlaced = (event: CustomEvent<BombPlacedEvent>) => {
+      if (sceneRef.current?.scene.isActive()) {
+        sceneRef.current.handleBombPlacedEvent(event.detail);
+      }
+    };
+
+    const handleGameStateUpdate = (event: CustomEvent<GameStateUpdate>) => {
+      if (sceneRef.current?.scene.isActive()) {
+        sceneRef.current.updateGameState(event.detail, 'event');
+      }
+    };
+
+    const handlePeriodicSync = (event: CustomEvent<GameStateUpdate>) => {
+      if (sceneRef.current?.scene.isActive()) {
+        sceneRef.current.updateGameState(event.detail, 'periodic');
+      }
+    };
+
+    window.addEventListener('player-moved', handlePlayerMoved as EventListener);
+    window.addEventListener('bomb-placed', handleBombPlaced as EventListener);
+    window.addEventListener('game-state-update', handleGameStateUpdate as EventListener);
+    window.addEventListener('periodic-sync', handlePeriodicSync as EventListener);
+
+    return () => {
+      window.removeEventListener('player-moved', handlePlayerMoved as EventListener);
+      window.removeEventListener('bomb-placed', handleBombPlaced as EventListener);
+      window.removeEventListener('game-state-update', handleGameStateUpdate as EventListener);
+      window.removeEventListener('periodic-sync', handlePeriodicSync as EventListener);
+    };
+  }, []);
 
   return <div ref={containerRef} className="game-canvas-container" />;
 };

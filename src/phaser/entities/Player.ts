@@ -119,6 +119,12 @@ export class Player {
       return false;
     }
 
+    // CRITICAL: Skip update if we're already at or moving to this position
+    // This prevents unnecessary updates that cause flickering
+    if (this.gridX === newGridX && this.gridY === newGridY) {
+      return true; // Already at this position, no update needed
+    }
+
     this.targetX = newGridX * this.cellSize + this.cellSize / 2;
     this.targetY = newGridY * this.cellSize + this.cellSize / 2;
     this.gridX = newGridX;
@@ -132,17 +138,31 @@ export class Player {
   }
 
   update(): void {
-    const lerpFactor = 0.3;
+    // CRITICAL: Using very high lerp factor (0.95) to eliminate flickering
+    // Almost instant movement to prevent jitter when receiving frequent updates
+    // Lower values (0.3-0.6) caused visible flickering for remote players
+    const lerpFactor = 0.95;
 
     const dx = this.targetX - this.sprite.x;
     const dy = this.targetY - this.sprite.y;
 
-    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
       this.sprite.x += dx * lerpFactor;
       this.sprite.y += dy * lerpFactor;
     } else {
+      // Snap to exact position when very close
       this.sprite.x = this.targetX;
       this.sprite.y = this.targetY;
     }
+  }
+
+  public hide(): void {
+    this.sprite.setVisible(false);
+    this.sprite.setActive(false);
+  }
+
+  public show(): void {
+    this.sprite.setVisible(true);
+    this.sprite.setActive(true);
   }
 }
