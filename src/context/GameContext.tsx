@@ -62,9 +62,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { accessToken } = useAuth();
 
   useEffect(() => {
-    if (accessToken) {
-      apiService.setAccessToken(accessToken);
-    }
+    apiService.setAccessToken(accessToken);
+    webSocketService.setAccessToken(accessToken);
   }, [accessToken]);
 
   useEffect(() => {

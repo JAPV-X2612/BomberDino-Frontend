@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '@phaser/entities/Player';
+import { PlayerStatus } from '@/types/api-types';
 import type {
   Point,
   PlayerKilledEvent,
@@ -26,6 +27,7 @@ export class GameScene extends Phaser.Scene {
   private BOARD_SIZE = 13;
   private sceneReady = false;
   private pendingState: GameStateUpdate | null = null;
+  private maxPlayersSeen = 0;
   private gameActions?: {
     sendMove?: (direction: Direction) => void;
     placeBomb?: (position: Point) => void;
@@ -312,10 +314,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePlayers(playersData: PlayerDTO[]): void {
+    const incomingPlayerIds = new Set(playersData.map((p) => p.id));
+    this.maxPlayersSeen = Math.max(this.maxPlayersSeen, Math.max(playersData.length, this.players.size));
+
+    // Remove visuals for players no longer reported by the server
+    this.players.forEach((player, id) => {
+      if (!incomingPlayerIds.has(id)) {
+        player.hide();
+        this.players.delete(id);
+      }
+    });
+
     playersData.forEach((playerData) => {
+      const remainingLives = Math.max(0, playerData.lifeCount - playerData.deaths);
+      const isDead = playerData.status === PlayerStatus.DEAD || remainingLives <= 0;
+
       let player = this.players.get(playerData.id);
 
       if (!player) {
+        if (isDead) {
+          return; // Do not create visuals for dead players
+        }
+
         const colorMap = ['blue', 'green', 'orange', 'purple'];
         const color =
           this.playerColors.get(playerData.id) ||
@@ -332,12 +352,18 @@ export class GameScene extends Phaser.Scene {
           this.CELL_SIZE,
         );
 
-        if (playerData.lifeCount !== undefined) {
-          player.setLives(playerData.lifeCount - playerData.deaths);
-        }
+        player.setLives(remainingLives);
 
         this.players.set(playerData.id, player);
       } else {
+        if (isDead) {
+          player.setLives(remainingLives);
+          player.hide();
+          return;
+        }
+
+        player.show();
+
         // DIRTY-CHECKING: Only update if position actually changed
         const currentPos = player.getGridPosition();
         const hasPositionChanged =
@@ -349,9 +375,8 @@ export class GameScene extends Phaser.Scene {
 
         // DIRTY-CHECKING: Only update lives if changed
         const currentLives = player.getLives();
-        const newLives = playerData.lifeCount - playerData.deaths;
-        if (currentLives !== newLives) {
-          player.setLives(newLives);
+        if (currentLives !== remainingLives) {
+          player.setLives(remainingLives);
         }
       }
     });
@@ -369,7 +394,12 @@ export class GameScene extends Phaser.Scene {
       return p.getLives() > 0;
     });
 
-    if (alivePlayers.length === 1 && this.players.size > 1) {
+    // Need at least 2 participants observed to declare a winner
+    if (this.maxPlayersSeen < 2) {
+      return;
+    }
+
+    if (alivePlayers.length === 1) {
       const winner = alivePlayers[0];
 
       // Mark game as ended to prevent duplicate winner checks
@@ -384,6 +414,12 @@ export class GameScene extends Phaser.Scene {
           winner: winner.getPlayerId(),
           winnerColor: colorFromTexture,
         });
+      });
+    } else if (alivePlayers.length === 0) {
+      // Everyone died (draw). End game to avoid infinite loop.
+      this.gameEnded = true;
+      this.time.delayedCall(1000, () => {
+        this.scene.start('GameOverScene', {});
       });
     }
   }
