@@ -603,6 +603,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-LEFT', () => this.handleMoveInput(-1, 0));
     this.input.keyboard!.on('keydown-RIGHT', () => this.handleMoveInput(1, 0));
     this.input.keyboard!.on('keydown-SPACE', () => this.handlePlaceBomb());
+    this.input.keyboard!.on('keydown-E', () => this.handleCollectPowerUp());
   }
 
   private handleMoveInput(dx: number, dy: number): void {
@@ -640,6 +641,46 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private handleCollectPowerUp(): void {
+    if (!this.localPlayerId) {
+      return;
+    }
+
+    const localPlayer = this.players.get(this.localPlayerId);
+    if (!localPlayer) {
+      return;
+    }
+
+    // Get player's current grid position
+    const playerPos = localPlayer.getGridPosition();
+
+    // Find any power-up at the player's position
+    const powerUpAtPosition = this.powerups.getChildren().find((powerup) => {
+      const circle = powerup as Phaser.GameObjects.Arc;
+      const powerupId = circle.getData('powerupId') as string | undefined;
+
+      if (!powerupId) return false;
+
+      // Calculate power-up grid position from pixel position
+      const powerUpGridX = Math.floor(circle.x / this.CELL_SIZE);
+      const powerUpGridY = Math.floor(circle.y / this.CELL_SIZE);
+
+      return powerUpGridX === playerPos.x && powerUpGridY === playerPos.y;
+    });
+
+    // If power-up found at player position, try to collect it
+    if (powerUpAtPosition && this.gameActions?.collectPowerUp) {
+      const circle = powerUpAtPosition as Phaser.GameObjects.Arc;
+      const powerupId = circle.getData('powerupId') as string;
+
+      console.log('🎁 Attempting to collect power-up:', powerupId);
+      this.gameActions.collectPowerUp(powerupId);
+    }
+  }
+
+  // ============================================================================
+  // NEW EVENT HANDLERS (Performance Optimization)
+  // ============================================================================
   /**
    * Handles individual player movement event.
    * Only updates the specific player that moved (not all players).
