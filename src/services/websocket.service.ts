@@ -200,7 +200,7 @@ class WebSocketService {
     }
 
     if (this.subscriptions.has(destination)) {
-      console.warn(`Already subscribed to ${destination}`);
+      // console.warn(`Already subscribed to ${destination}`);
       return;
     }
 
