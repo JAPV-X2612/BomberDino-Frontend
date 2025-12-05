@@ -67,11 +67,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    console.log(`📊 updateGameState from ${source}`);
+    // console.log(`📊 updateGameState from ${source}`);
 
     // ✅ Inicializar tablero la primera vez
     if (state.tiles && !this.boardInitialized) {
-      console.log('🎨 Initializing board from backend tiles');
+      // console.log('🎨 Initializing board from backend tiles');
       this.initializeBoardFromBackend(state.tiles);
     }
 
@@ -82,13 +82,13 @@ export class GameScene extends Phaser.Scene {
     // ✅ Actualizar bombas SOLO si NO es periodic sync
     // Esto permite carga inicial + eventos normales, pero bloquea periodic sync
     if (state.bombs && source !== 'periodic') {
-      console.log(`🔄 Updating bombs (source: ${source})`);
+      // console.log(`🔄 Updating bombs (source: ${source})`);
       this.updateBombs(state.bombs);
     }
   }
 
   public handleBombExploded(event: BombExplodedEvent): void {
-    console.log(`💥 Bomb ${event.bombId} exploded, affected ${event.affectedTiles.length} tiles`);
+    // console.log(`💥 Bomb ${event.bombId} exploded, affected ${event.affectedTiles.length} tiles`);
 
     const bombToRemove = this.bombs.getChildren().find((b) => {
       const container = b as Phaser.GameObjects.Container;
@@ -96,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (bombToRemove) {
-      console.log(`🗑️ Removing exploded bomb ${event.bombId}`);
+      // console.log(`🗑️ Removing exploded bomb ${event.bombId}`);
       bombToRemove.destroy();
     }
 
@@ -195,7 +195,7 @@ export class GameScene extends Phaser.Scene {
 
       // Con animación de fade out
       if (player.getLives() <= 0) {
-        console.log(`💀 Player ${event.victimId} died`);
+        // console.log(`💀 Player ${event.victimId} died`);
 
         const sprite = player.getSprite();
 
@@ -321,7 +321,7 @@ export class GameScene extends Phaser.Scene {
       this.playerColors = new Map(GameScene.persistentColors);
     }
 
-    console.log('🎨 Player colors:', Array.from(this.playerColors.entries()));
+    // console.log('🎨 Player colors:', Array.from(this.playerColors.entries()));
 
     const incomingPlayerIds = new Set(playersData.map((p) => p.id));
     this.maxPlayersSeen = Math.max(
@@ -437,8 +437,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateBombs(bombs: BombDTO[]): void {
-    console.log(`🔄 updateBombs called with ${bombs.length} bombs from server`);
-    console.log(`🔄 Current visual bombs: ${this.bombs.getChildren().length}`);
+    // console.log(`🔄 updateBombs called with ${bombs.length} bombs from server`);
+    // console.log(`🔄 Current visual bombs: ${this.bombs.getChildren().length}`);
 
     // Get current bomb IDs
     const currentBombIds = new Set(
@@ -456,7 +456,7 @@ export class GameScene extends Phaser.Scene {
       const bombId = container.getData('bombId');
 
       if (!newBombIds.has(bombId)) {
-        console.log(`🗑️ Removing bomb ${bombId} (no longer in server state)`);
+        // console.log(`🗑️ Removing bomb ${bombId} (no longer in server state)`);
         container.destroy();
       }
     });
@@ -464,24 +464,24 @@ export class GameScene extends Phaser.Scene {
     // 2. Add NEW bombs that don't exist visually yet
     bombs.forEach((bombData) => {
       if (!currentBombIds.has(bombData.id)) {
-        console.log(`➕ Adding new bomb ${bombData.id} from server state`);
+        // console.log(`➕ Adding new bomb ${bombData.id} from server state`);
         this.createBombVisual(bombData);
       } else {
         // Bomb already exists, optionally update position if needed
-        console.log(`✓ Bomb ${bombData.id} already exists, keeping it`);
+        // console.log(`✓ Bomb ${bombData.id} already exists, keeping it`);
       }
     });
 
-    console.log(`✅ updateBombs completed, total visual bombs: ${this.bombs.getChildren().length}`);
+    // console.log(`✅ updateBombs completed, total visual bombs: ${this.bombs.getChildren().length}`);
   }
 
   private createBombVisual(bombData: BombDTO): void {
     const bombX = bombData.posX * this.CELL_SIZE + this.CELL_SIZE / 2;
     const bombY = bombData.posY * this.CELL_SIZE + this.CELL_SIZE / 2;
 
-    console.log(
-      `🎨 Creating bomb at (${bombX}, ${bombY}), grid (${bombData.posX}, ${bombData.posY})`,
-    );
+    // console.log(
+    //   `🎨 Creating bomb at (${bombX}, ${bombY}), grid (${bombData.posX}, ${bombData.posY})`,
+    // );
 
     const bomb = this.add.container(bombX, bombY);
     bomb.setData('bombId', bombData.id);
@@ -534,7 +534,7 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    console.log(`✅ Bomb visual created with depth 150`);
+    // console.log(`✅ Bomb visual created with depth 150`);
   }
 
   private updatePowerUps(powerUpsData: PowerUpDTO[]): void {
@@ -673,7 +673,7 @@ export class GameScene extends Phaser.Scene {
       const circle = powerUpAtPosition as Phaser.GameObjects.Arc;
       const powerupId = circle.getData('powerupId') as string;
 
-      console.log('🎁 Attempting to collect power-up:', powerupId);
+      // console.log('🎁 Attempting to collect power-up:', powerupId);
       this.gameActions.collectPowerUp(powerupId);
     }
   }
@@ -699,7 +699,7 @@ export class GameScene extends Phaser.Scene {
    * Only creates the specific bomb that was placed (not updating entire bomb list).
    */
   handleBombPlacedEvent(event: BombPlacedEvent): void {
-    console.log(`💣 Bomb placed event: ${event.bombId} at (${event.x}, ${event.y})`);
+    // console.log(`💣 Bomb placed event: ${event.bombId} at (${event.x}, ${event.y})`);
 
     // Check if bomb already exists
     const existingBomb = this.bombs.getChildren().find((b) => {
@@ -708,7 +708,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (existingBomb) {
-      console.log(`⚠️ Bomb ${event.bombId} already exists, skipping`);
+      // console.log(`⚠️ Bomb ${event.bombId} already exists, skipping`);
       return;
     }
 
@@ -722,7 +722,7 @@ export class GameScene extends Phaser.Scene {
       timeToExplode: event.timeToExplode,
     });
 
-    console.log(`✅ Bomb ${event.bombId} created, total bombs: ${this.bombs.getChildren().length}`);
+    // console.log(`✅ Bomb ${event.bombId} created, total bombs: ${this.bombs.getChildren().length}`);
   }
 
   /**
@@ -730,7 +730,7 @@ export class GameScene extends Phaser.Scene {
    * Replaces entire game state to prevent drift.
    */
   handlePeriodicSync(state: GameStateUpdate): void {
-    console.log('🔄 Periodic sync received');
+    // console.log('🔄 Periodic sync received');
 
     // Update players and powerups normally
     if (state.players) {
@@ -752,7 +752,7 @@ export class GameScene extends Phaser.Scene {
    * Used for periodic sync to prevent removing bombs that were just placed.
    */
   private syncBombsAddOnly(bombs: BombDTO[]): void {
-    console.log(`🔄 syncBombsAddOnly called with ${bombs.length} bombs from server`);
+    // console.log(`🔄 syncBombsAddOnly called with ${bombs.length} bombs from server`);
 
     const currentBombIds = new Set(
       this.bombs.getChildren().map((b) => {
@@ -765,18 +765,17 @@ export class GameScene extends Phaser.Scene {
     // Never remove bombs (they'll be removed by explosion events)
     bombs.forEach((bombData) => {
       if (!currentBombIds.has(bombData.id)) {
-        console.log(`➕ Adding missing bomb ${bombData.id} from periodic sync`);
+        // console.log(`➕ Adding missing bomb ${bombData.id} from periodic sync`);
         this.createBombVisual(bombData);
       }
     });
 
-    console.log(
-      `✅ syncBombsAddOnly completed, total visual bombs: ${this.bombs.getChildren().length}`,
-    );
+    // console.log(
+    //   `✅ syncBombsAddOnly completed, total visual bombs: ${this.bombs.getChildren().length}`,
+    // );
   }
 
   update(): void {
-    // El update ahora se maneja mediante WebSocket
     this.players.forEach((player) => player.update());
   }
 }

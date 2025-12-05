@@ -13,16 +13,10 @@ import type { GameStateUpdate } from '@/types/websocket-types';
  * Part of the HYBRID ARCHITECTURE for eliminating flicker while maintaining sync.
  */
 class SyncManager {
-  // Track last sequence number per event type
+
   private lastSequenceNumbers: Map<string, Map<string, number>> = new Map();
-
-  // Track last heartbeat timestamp
   private lastHeartbeat: Map<string, number> = new Map();
-
-  // Callback to trigger resync
   private resyncCallback: ((state: GameStateUpdate) => void) | null = null;
-
-  // Resync in progress flag
   private resyncInProgress: Set<string> = new Set();
 
   /**
@@ -49,14 +43,12 @@ class SyncManager {
     const sessionSeq = this.lastSequenceNumbers.get(sessionId)!;
     const lastSeq = sessionSeq.get(eventType) || 0;
 
-    // Check for gaps (missed messages)
     if (sequenceNumber > lastSeq + 1 && lastSeq !== 0) {
       const missedCount = sequenceNumber - lastSeq - 1;
       console.warn(
         `⚠️ Missed ${missedCount} ${eventType} messages (last: ${lastSeq}, current: ${sequenceNumber})`,
       );
 
-      // Trigger resync if too many missed messages
       if (missedCount > 5) {
         console.error(`❌ Too many missed messages, triggering resync...`);
         this.triggerResync(sessionId);
@@ -64,15 +56,13 @@ class SyncManager {
       }
     }
 
-    // Check for duplicate/out-of-order
     if (sequenceNumber <= lastSeq) {
       console.warn(
         `⚠️ Duplicate or out-of-order ${eventType} (last: ${lastSeq}, current: ${sequenceNumber})`,
       );
-      return false; // Ignore duplicate
+      return false;
     }
 
-    // Update tracking
     sessionSeq.set(eventType, sequenceNumber);
     return true;
   }
@@ -96,15 +86,14 @@ class SyncManager {
   checkHeartbeat(sessionId: string): void {
     const lastBeat = this.lastHeartbeat.get(sessionId);
 
-    if (!lastBeat) return; // No heartbeat received yet
+    if (!lastBeat) return;
 
     const timeSinceLastBeat = Date.now() - lastBeat;
-    const HEARTBEAT_TIMEOUT = 2000; // 2 seconds (server sends every 500ms)
+    const HEARTBEAT_TIMEOUT = 2000;
 
     if (timeSinceLastBeat > HEARTBEAT_TIMEOUT) {
       console.warn(`⚠️ No heartbeat for ${timeSinceLastBeat}ms, connection may be lost`);
 
-      // Trigger resync after 3 seconds of no heartbeat
       if (timeSinceLastBeat > 3000) {
         console.error(`❌ Heartbeat timeout, triggering resync...`);
         this.triggerResync(sessionId);
@@ -118,7 +107,6 @@ class SyncManager {
    * @param sessionId - Current game session ID
    */
   async triggerResync(sessionId: string): Promise<void> {
-    // Prevent multiple simultaneous resyncs
     if (this.resyncInProgress.has(sessionId)) {
       console.log(`🔄 Resync already in progress for session ${sessionId}`);
       return;
@@ -129,16 +117,13 @@ class SyncManager {
     try {
       console.log(`🔄 Fetching full state for resync...`);
 
-      // Fetch full state from REST endpoint
       const fullState = await gameApiService.getFullGameState(sessionId);
 
-      // Apply full state via callback
       if (this.resyncCallback && fullState) {
         this.resyncCallback(fullState);
         console.log(`✅ Resync completed successfully`);
       }
 
-      // Reset sequence tracking after resync
       this.resetSequenceTracking(sessionId);
     } catch (error) {
       console.error(`❌ Resync failed:`, error);

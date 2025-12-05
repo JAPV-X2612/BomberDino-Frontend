@@ -23,13 +23,13 @@ export const Lobby: React.FC = () => {
 
   useEffect(() => {
     return onGameStart(() => {
-      console.log('Game started! Navigating to game...');
+      // console.log('Game started! Navigating to game...');
       navigate('/game');
     });
   }, [onGameStart, navigate]);
 
   useEffect(() => {
-    console.log('ðŸ” GameState:', gameState);
+    // console.log('GameState:', gameState);
   }, [gameState]);
 
   useEffect(() => {

@@ -200,12 +200,12 @@ class WebSocketService {
     }
 
     if (this.subscriptions.has(destination)) {
-      console.warn(`Already subscribed to ${destination}`);
+      // console.warn(`Already subscribed to ${destination}`);
       return;
     }
 
     const subscription = this.client.subscribe(destination, (message: IMessage) => {
-      console.log('📩 Mensaje recibido en', destination, ':', message.body);
+      // console.log('📩 Message received in', destination, ':', message.body);
       try {
         const data = JSON.parse(message.body) as T;
         handler(data);
@@ -226,7 +226,7 @@ class WebSocketService {
       timestamp: Date.now(),
     };
 
-    console.log('📤 Sending move:', payload);
+    // console.log('📤 Sending move:', payload);
 
     this.client.publish({
       destination: '/app/game/move',

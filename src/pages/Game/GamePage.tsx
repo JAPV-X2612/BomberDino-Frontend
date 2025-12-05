@@ -23,31 +23,31 @@ interface GamePlayer {
 export const GamePage: FC = () => {
   const navigate = useNavigate();
   const { gameState, sessionId, playerId, isConnected } = useGame();
-  console.log('📌 GamePage playerId:', playerId);
-  console.log('📌 GamePage sessionId:', sessionId);
+  // console.log('📌 GamePage playerId:', playerId);
+  // console.log('📌 GamePage sessionId:', sessionId);
   const [players, setPlayers] = useState<GamePlayer[]>([]);
   const [timeRemaining, setTimeRemaining] = useState(180);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!sessionId || !playerId) {
-      console.warn('No session or player ID, redirecting to home');
+      // console.warn('No session or player ID, redirecting to home');
       navigate('/');
     }
 
     if (!isConnected) {
-      console.warn('WebSocket not connected');
+      // console.warn('WebSocket not connected');
     }
   }, [sessionId, playerId, isConnected, navigate]);
 
   useEffect(() => {
     if (gameState && gameState.players.length > 0) {
-      console.log('🎮 GameState updated:', {
-        players: gameState.players.length,
-        bombs: gameState.bombs.length,
-        powerUps: gameState.powerUps.length,
-        phase: gameState.phase,
-      });
+      // console.log('🎮 GameState updated:', {
+      //   players: gameState.players.length,
+      //   bombs: gameState.bombs.length,
+      //   powerUps: gameState.powerUps.length,
+      //   phase: gameState.phase,
+      // });
 
       const colors = [DinoColor.BLUE, DinoColor.GREEN, DinoColor.ORANGE, DinoColor.PURPLE];
 
@@ -104,7 +104,7 @@ export const GamePage: FC = () => {
   useEffect(() => {
     const alivePlayers = players.filter((p) => p.isAlive);
     if (alivePlayers.length === 1 && players.length > 1) {
-      console.log('Game Over: Winner is', alivePlayers[0].name);
+      // console.log('Game Over: Winner is', alivePlayers[0].name);
     }
   }, [players]);
 
